@@ -151,10 +151,10 @@ export const DECISIONS: Decision[] = [
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
   {
-    q: 'Q32 · Q33',
+    q: 'Q32 – Q34',
     topic: 'schedule_seats',
-    decision: '한 행 = 한 회차의 한 좌석. id · schedule_id · seat_id · grade_id · status, UNIQUE (schedule_id, seat_id). status는 다음 문답에서',
-    why: '같은 좌석도 회차마다 따로 팔리므로 FK는 공연이 아니라 회차를 가리킨다',
-    open: true,
+    decision: '한 행 = 한 회차의 한 좌석. UNIQUE (schedule_id, seat_id), status는 ENUM (available · held · sold)',
+    why: '같은 좌석도 회차마다 따로 팔린다. 상태 목록은 코드와 함께 드물게 바뀌고 값이 빠질 일이 거의 없다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
   },
 ];

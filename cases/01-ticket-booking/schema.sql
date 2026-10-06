@@ -50,11 +50,15 @@ CREATE TABLE grades (
   CONSTRAINT grades_concert_sort_uq UNIQUE (concert_id, sort_order)
 );
 
+-- 좌석 상태 (Q34): 예약 가능 · 예약 진행 중 · 예약 완료. 선언한 순서가 곧 정렬 순서다
+CREATE TYPE seat_status AS ENUM ('available', 'held', 'sold');
+
 CREATE TABLE schedule_seats (
   id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  schedule_id BIGINT NOT NULL REFERENCES schedules (id),
-  seat_id     BIGINT NOT NULL REFERENCES seats (id),
-  grade_id    BIGINT NOT NULL REFERENCES grades (id),
+  schedule_id BIGINT      NOT NULL REFERENCES schedules (id),
+  seat_id     BIGINT      NOT NULL REFERENCES seats (id),
+  grade_id    BIGINT      NOT NULL REFERENCES grades (id),
+  status      seat_status NOT NULL DEFAULT 'available',
   CONSTRAINT schedule_seats_schedule_seat_uq UNIQUE (schedule_id, seat_id)
 );
 
@@ -105,4 +109,6 @@ COMMENT ON COLUMN schedule_seats.id IS '내부 PK는 BIGINT IDENTITY로 통일 (
 COMMENT ON COLUMN schedule_seats.schedule_id IS '어느 회차인가. 공연이 아니라 회차를 가리켜야 회차별 상태를 구분한다 (Q32)';
 COMMENT ON COLUMN schedule_seats.seat_id IS '어느 좌석인가 (Q33)';
 COMMENT ON COLUMN schedule_seats.grade_id IS '이 회차에서 이 좌석의 등급. 판매 기록의 스냅샷 (Q7, Q8)';
+COMMENT ON COLUMN schedule_seats.status IS '지금 상태. 진실은 예약 이력이고, 상태는 이력과 같은 트랜잭션에서 바꾼다 (Q3, Q34). 회차를 만들 때는 모두 예약 가능';
+COMMENT ON TYPE seat_status IS 'available 예약 가능 · held 예약 진행 중 · sold 예약 완료. 상태 목록은 코드와 함께 배포로 바뀐다 (Q34)';
 COMMENT ON CONSTRAINT schedule_seats_schedule_seat_uq ON schedule_seats IS '한 회차에 같은 좌석 두 번 금지. 자연 키. schedule_id가 앞이라 회차별 좌석맵 조회와 FK 검사도 겸한다 (Q33)';

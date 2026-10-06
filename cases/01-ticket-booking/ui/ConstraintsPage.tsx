@@ -53,6 +53,13 @@ const SQLSTATES = [
     here: 'id 직접 지정 (Q10)',
     message: '사용자 입력이 아니라 코드 버그. 안내 대신 서버 로그로',
   },
+  {
+    code: '22P02',
+    name: 'invalid_text_representation',
+    meaning: '값을 그 타입으로 읽을 수 없음 (ENUM에 없는 값)',
+    here: "좌석 상태에 '예약완료' (Q34)",
+    message: '화면 문구가 아니라 키(sold)를 보내야 하는 코드 버그. 서버 로그로',
+  },
 ];
 
 const OUTCOME = { rejected: '거부', accepted: '들어감' } as const;

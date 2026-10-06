@@ -773,9 +773,44 @@ PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 
 - 반영: `status`를 뺀 나머지를 schema.sql에, 2,000행을 seed.sql에. 제약조건 검증 4개(같은 회차의 같은 좌석 · 없는 회차 · 등급 NULL · 다른 공연의 등급)
 - 결정 대기: `status`의 값 목록과 지키는 방법 ← Q34
 
-## SQL 반영 (Q4~Q33)
+#### Q34. `status`는 어떤 상태를 갖고, 그 목록은 무엇으로 지킬까?
 
-`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
+**내 답**: 예약 가능 · 예약 진행 중 · 예약 완료 세 가지. ENUM이 좋을 것 같다.
+
+**피드백 (상태)**: 관객의 흐름(고르기 → 결제하는 몇 분 → 결제 완료)과 정확히 맞는다. DB에는 키(`available` · `held` · `sold`)를 두고 한국어 문구는 화면이 붙인다.
+
+- **취소는 상태가 아니다.** 취소되면 좌석은 다시 `available`이 되고, 취소했다는 사실은 예약 이력에 남는다(Q3). 상태는 "지금 이 순간"이고, 지나온 일은 이력이 기억한다. 그래서 상태는 이력과 **같은 트랜잭션에서** 바꿔야 어긋나지 않는다.
+- **`held`에는 아직 "누가, 언제까지"가 없다.** 결제 화면에서 나가 버리면 그 좌석은 영원히 `held`로 남는다. 점유와 만료는 Step 2에서 다룬다.
+- **실무에서 하나 더 생기기도 한다**: 카메라석이나 시야 방해석처럼 아예 팔지 않는 좌석. 지금은 넣지 않고, 필요해지면 값을 추가한다.
+
+**피드백 (ENUM)**: 받아들일 만한 선택이다. Q29에서는 CHECK를 골랐는데 모순이 아니다. 차이는 **목록이 얼마나 자주 바뀌고, 값이 빠질 일이 있느냐**다.
+
+- 팔레트는 디자인이 바뀔 때마다 색이 들고 난다. 그래서 값을 뺄 수 있는 CHECK가 맞았다.
+- 좌석 상태는 상태 머신이라 코드와 함께 아주 드물게 바뀌고, 있던 상태가 사라질 일이 거의 없다. 그러니 "값을 뺄 수 없다"는 ENUM의 약점이 덜 아프다. 대신 선언한 순서로 정렬되고(`available < held < sold`), ERD에도 `seat_status`라는 이름으로 뜻이 드러난다.
+- **주의할 점**: 로드맵의 Step 5 "Redis로 점유하기"에서 점유를 Redis로 옮기면, DB의 `held`가 쓸모없어질 수 있다. 운영 DB라면 그때 타입을 새로 만드는 마이그레이션이 필요하다. 이 실험실은 실행마다 스키마를 새로 만들어서 영향은 없다.
+
+**확인한 ENUM 동작** (psql, 자동 테스트)
+
+| 시도 | 결과 |
+|---|---|
+| 없는 값(`'예약완료'`) 넣기 | 거부 `22P02` invalid_text_representation. CHECK라면 `23514`다 |
+| `ALTER TYPE … DROP VALUE` | `0A000` 구현되지 않음. 값을 뺄 방법이 없다 |
+| `ADD VALUE` 직후 같은 트랜잭션에서 사용 | `55P04` 커밋 전에는 쓸 수 없다 |
+| `ORDER BY status` | 선언한 순서: available < held < sold |
+
+**함께 정한 것** (바꾸고 싶으면 말하기)
+
+- 키 이름: `available` · `held` · `sold`. `held`는 Step 2의 "점유"와 같은 말이다
+- `NOT NULL` (Q18의 규칙), `DEFAULT 'available'`: 회차를 만들 때 미리 만든 행은 모두 팔 수 있는 상태로 시작한다(Q2)
+
+**정리**
+
+- 합의: `CREATE TYPE seat_status AS ENUM ('available', 'held', 'sold')`, `status seat_status NOT NULL DEFAULT 'available'`
+- 반영: schema.sql, 제약조건 검증 2개(화면 문구로 바꾸기 `22P02` · NULL `23502`), SQLSTATE 표에 `22P02`, ENUM 동작 테스트. 2,000행 모두 `available`로 시작한다
+
+## SQL 반영 (Q4~Q34)
+
+`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`, `seat_status`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
 ## 눈으로 확인하기
 
@@ -822,6 +857,7 @@ PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 
 | Q31 | VIP(10)와 R(20) 사이에 SR(15) | 들어감 (다른 행은 그대로) |
 | Q33 | 같은 회차에 같은 좌석 · 등급 NULL | 거부 `23505` · `23502` |
 | Q32 | 없는 회차의 좌석 | 거부 `23503` foreign_key_violation |
+| Q34 | 좌석 상태를 화면 문구('예약완료') · NULL로 | 거부 `22P02` · `23502` |
 | Q25 | 회차 좌석에 다른 공연의 등급 | **들어감** (아직 못 막는 구멍) |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).

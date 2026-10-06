@@ -339,3 +339,37 @@ describe('Q32 · Q33. schedule_seats', () => {
     );
   });
 });
+
+describe('Q34. 좌석 상태 ENUM', () => {
+  it('회차를 만들면 모든 좌석이 예약 가능(available)으로 시작한다', async () => {
+    const { rows } = await pool.query(`SELECT status::text, count(*)::int AS n FROM schedule_seats GROUP BY status`);
+    expect(rows).toEqual([{ status: 'available', n: 2000 }]);
+  });
+
+  it('ENUM은 선언한 순서로 정렬되고, 값을 뺄 수 없고, 새 값은 커밋 전에 쓸 수 없다', async () => {
+    const { rows } = await pool.query(`SELECT enum_range(NULL::seat_status)::text AS values`);
+    expect(rows[0].values).toBe('{available,held,sold}');
+
+    const client = await pool.connect();
+    const codeOf = async (sql: string) => {
+      await client.query('SAVEPOINT s');
+      try {
+        await client.query(sql);
+        return 'ok';
+      } catch (err) {
+        return (err as { code?: string }).code;
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT s');
+      }
+    };
+    try {
+      await client.query('BEGIN');
+      expect(await codeOf(`ALTER TYPE seat_status DROP VALUE 'held'`)).toBe('0A000');
+      await client.query(`ALTER TYPE seat_status ADD VALUE 'blocked'`);
+      expect(await codeOf(`SELECT 'blocked'::seat_status`)).toBe('55P04');
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
+  });
+});
