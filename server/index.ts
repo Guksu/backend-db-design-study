@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import { ticketApi } from '../cases/01-ticket-booking/api';
 import { createPool } from '../lab/db';
 
 const app = new Hono().basePath('/api');
@@ -10,6 +11,8 @@ app.get('/health', async (c) => {
   const { rows } = await healthPool.query(`SELECT current_setting('server_version') AS version`);
   return c.json({ postgres: rows[0].version as string });
 });
+
+app.route('/ticket', ticketApi);
 
 app.onError((err, c) => {
   // 42P01 undefined_table: 케이스 스키마를 아직 만들지 않았다
