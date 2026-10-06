@@ -415,6 +415,17 @@ SELECT (SELECT min(id) FROM schedules), s.id, g.id FROM s, g`,
     expect: 'accepted',
   },
   {
+    id: 'schedule-seat-other-venue-seat',
+    decision: 'Q35',
+    rule: '다른 공연장의 좌석 (아직 못 막는 구멍)',
+    label: '스터디 아레나 공연의 회차에 다른 공연장 좌석을 붙인다',
+    sql: `WITH v AS (INSERT INTO venues (name) VALUES ('다른 공연장') RETURNING id),
+     s AS (INSERT INTO seats (venue_id, section, row_no, seat_no) SELECT id, 'A', 1, 1 FROM v RETURNING id)
+INSERT INTO schedule_seats (schedule_id, seat_id, grade_id)
+SELECT (SELECT min(id) FROM schedules), s.id, (SELECT min(id) FROM grades) FROM s`,
+    expect: 'accepted',
+  },
+  {
     id: 'concert-duplicate-title',
     decision: 'Q15',
     rule: 'title에 UNIQUE 없음 (의도)',

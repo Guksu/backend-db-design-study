@@ -808,6 +808,58 @@ PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 
 - 합의: `CREATE TYPE seat_status AS ENUM ('available', 'held', 'sold')`, `status seat_status NOT NULL DEFAULT 'available'`
 - 반영: schema.sql, 제약조건 검증 2개(화면 문구로 바꾸기 `22P02` · NULL `23502`), SQLSTATE 표에 `22P02`, ENUM 동작 테스트. 2,000행 모두 `available`로 시작한다
 
+#### Q35. 회차 좌석에 다른 공연의 등급이 붙는 걸 막아야 할까? 막는다면 어떻게?
+
+**내 답**: 막아야 한다. FK에 공연 · 회차 · 좌석도 묶으면 될까?
+
+**피드백**: 막아야 한다는 판단이 맞고, "좌석도 묶어야 하나"는 좋은 직감이다. 같은 종류의 구멍이 **하나 더** 있다.
+
+| 구멍 | 지켜야 할 것 | 지금 |
+|---|---|---|
+| 다른 공연의 등급 (Q25) | 등급의 공연 = 회차의 공연 | 들어감 |
+| 다른 공연장의 좌석 | 좌석의 공연장 = 회차 공연의 공연장 | 들어감 (제약조건 검증에 추가) |
+
+FK 하나는 "가리키는 행이 있는가"만 본다. 위 두 가지는 **두 FK가 가리키는 행끼리 맞는가**라서 FK 하나로는 표현이 안 된다.
+
+**설명: 복합 FK로 "같은 값"을 강제하기** (psql로 확인)
+
+`schedule_seats`에 공연(`concert_id`)과 공연장(`venue_id`)을 복사해 두고, FK들이 **같은 컬럼을 함께 쓰게** 한다.
+
+```sql
+FOREIGN KEY (schedule_id, concert_id) REFERENCES schedules (id, concert_id)  -- 회차의 공연
+FOREIGN KEY (grade_id,    concert_id) REFERENCES grades    (id, concert_id)  -- 등급의 공연 = 같은 concert_id
+FOREIGN KEY (concert_id,  venue_id)   REFERENCES concerts  (id, venue_id)    -- 공연의 공연장
+FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 좌석의 공연장 = 같은 venue_id
+```
+
+복합 FK가 가리키는 컬럼 묶음에는 UNIQUE가 있어야 해서, 부모 네 테이블에 `UNIQUE (id, concert_id)` · `UNIQUE (id, venue_id)`가 필요하다. `id`가 이미 PK라 값으로는 당연히 유일하지만, PostgreSQL은 그 묶음 그대로의 제약을 요구한다.
+
+| 넣은 행 | 결과 |
+|---|---|
+| 같은 공연의 회차 · 등급, 같은 공연장의 좌석 | 들어감 |
+| 다른 공연의 등급 | 거부 `(grade_id, concert_id)`가 grades에 없음 |
+| 다른 공연장의 좌석 | 거부 `(seat_id, venue_id)`가 seats에 없음 |
+| `concert_id`를 거짓으로 적어 등급 검사를 피하려 함 | 거부 `(schedule_id, concert_id)`가 schedules에 없음 |
+| 복사한 컬럼을 NULL로 | **들어감**. 복합 FK는 컬럼 하나라도 NULL이면 검사하지 않는다(기본 MATCH SIMPLE). 그래서 복사한 컬럼은 반드시 NOT NULL |
+
+- **반정규화지만 어긋나지 않는다.** Q8의 등급 스냅샷은 일부러 원본과 달라질 수 있게 둔 복사본이었다. 이번 복사본은 FK가 원본과 같은 값만 허용하므로 **어긋날 수 없다**. 공연의 공연장을 바꾸려 해도 FK가 막아서, 회차 좌석을 어떻게 할지 먼저 정하게 만든다.
+- **비용**: 가장 큰 테이블에 BIGINT 두 개(행마다 16바이트), 부모 네 테이블에 UNIQUE 인덱스 하나씩, INSERT마다 FK 검사가 3번에서 5번으로 는다(부모는 작은 테이블이라 인덱스 조회 몇 번이다).
+
+**다른 방법**
+
+| 방법 | 장점 | 단점 |
+|---|---|---|
+| 트리거 | 컬럼을 복사하지 않는다 | 규칙이 테이블 정의에 안 보인다. 부모 쪽 변경(공연의 공연장 바꾸기)까지 따로 막아야 한다 |
+| 애플리케이션 | 가장 간단하다 | 회차 좌석을 만드는 코드 · 어드민의 등급 변경 · 직접 SQL 모두가 지켜야 한다(Q21과 같은 이야기) |
+
+참고: 좌석은 회차를 만들 때 공연장 좌석을 JOIN해서 한 번만 정해지고 이후 바뀌지 않는다. 등급은 어드민이 나중에 바꿀 수 있다(Q8). 그래서 쓰기 경로는 등급 쪽이 더 많다.
+
+**정리**
+
+- 합의: 다른 공연의 등급은 막는다
+- 새로 찾은 구멍: 다른 공연장의 좌석
+- 결정 대기: 두 구멍을 무엇으로 막을지 ← Q36
+
 ## SQL 반영 (Q4~Q34)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`, `seat_status`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
@@ -859,6 +911,7 @@ PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 
 | Q32 | 없는 회차의 좌석 | 거부 `23503` foreign_key_violation |
 | Q34 | 좌석 상태를 화면 문구('예약완료') · NULL로 | 거부 `22P02` · `23502` |
 | Q25 | 회차 좌석에 다른 공연의 등급 | **들어감** (아직 못 막는 구멍) |
+| Q35 | 회차 좌석에 다른 공연장의 좌석 | **들어감** (아직 못 막는 구멍) |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 
