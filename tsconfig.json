@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node", "vite/client"],
+    "paths": { "@web/*": ["./web/src/*"] }
+  },
+  "include": ["lab", "cases", "server", "web", "vite.config.ts", "vitest.config.ts"]
+}

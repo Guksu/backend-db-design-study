@@ -1,0 +1,399 @@
+.erd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: calc(100vh - 210px);
+  min-height: 540px;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* 테이블을 고르면 인스펙터가 캔버스 옆에 붙는다. 캔버스 위를 덮지 않는다 */
+.erd[data-inspector] {
+  grid-template-columns: minmax(0, 1fr) 400px;
+}
+
+@media (max-width: 1100px) {
+  .erd[data-inspector] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(360px, 1fr) minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .erd[data-inspector] .erd-canvas {
+    height: 420px;
+  }
+}
+
+.erd-canvas {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--plane);
+}
+
+.erd-canvas .react-flow {
+  --xy-background-color: var(--plane);
+  --xy-background-pattern-color: var(--line-strong);
+  --xy-edge-stroke: var(--ink-2);
+  --xy-controls-button-background-color: var(--surface);
+  --xy-controls-button-border-color: var(--line);
+  --xy-controls-button-color: var(--ink-2);
+}
+
+.erd-markers {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.erd-marker-stroke {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+
+.erd-marker-ring {
+  fill: var(--plane);
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+
+.erd-edge .react-flow__edge-path {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+
+.erd-edge-planned .react-flow__edge-path {
+  stroke: var(--muted);
+  stroke-dasharray: 5 4;
+}
+
+.erd-edge.is-active .react-flow__edge-path {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.erd-canvas .react-flow__edge-text {
+  fill: var(--ink-2);
+  font-family: var(--font);
+  font-size: 11px;
+}
+
+.erd-canvas .react-flow__edge-textbg {
+  fill: var(--plane);
+}
+
+/* 테이블 노드 */
+.erd-table {
+  width: 248px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12.5px;
+  box-shadow: 0 1px 2px rgb(20 23 28 / 0.06);
+}
+
+.erd-table[data-selected] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.erd-table[data-planned] {
+  width: 200px;
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  box-shadow: none;
+}
+
+.erd-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.erd-table[data-planned] .erd-head {
+  border-bottom-style: dashed;
+  background: none;
+}
+
+.erd-name {
+  font-weight: 700;
+}
+
+.erd-role {
+  margin-left: auto;
+  padding: 1px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.erd-planned-note {
+  padding: 9px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.erd-columns {
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+}
+
+.erd-column {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+}
+
+.erd-column:hover {
+  background: var(--surface-2);
+}
+
+.erd-key {
+  display: inline-flex;
+}
+
+.erd-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.erd-icon-pk {
+  color: var(--warning);
+}
+
+.erd-icon-fk {
+  color: var(--ink-2);
+}
+
+.erd-column-name {
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erd-column-name[data-pk] {
+  font-weight: 500;
+}
+
+.erd-column-type {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.erd-flags {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.erd-flags abbr {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.erd-handle {
+  width: 1px !important;
+  min-width: 0 !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* 캔버스 위 도구 */
+.erd-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.erd-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11px;
+  list-style: none;
+}
+
+.erd-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erd-legend-fk {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+
+.erd-legend-planned {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.erd-legend-crow {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* 인스펙터: 테이블을 골랐을 때만 캔버스 위에 뜬다 */
+.erd-inspector {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+
+@media (max-width: 1100px) {
+  .erd-inspector {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
+.erd-inspector-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 12px 10px 16px;
+}
+
+.erd-inspector-head > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.erd-inspector-head h2 {
+  font-family: var(--mono);
+  font-size: 15px;
+}
+
+.erd-inspector .tabs {
+  padding: 0 8px;
+}
+
+.erd-inspector-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 16px;
+}
+
+.erd-inspector-body h3 {
+  margin: 16px 0 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.erd-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0 0 10px;
+}
+
+.erd-stats dt {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erd-stats dd {
+  margin: 1px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.erd-sample {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.erd-sample .table th,
+.erd-sample .table td {
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.erd-source {
+  margin-top: 14px;
+}
+
+.erd-hint {
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.erd-comment {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+
+.erd-detail {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.erd-detail dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 12.5px;
+}
+
+.erd-detail dd {
+  margin: 3px 0 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.erd-kind {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+}

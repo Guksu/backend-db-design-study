@@ -1,0 +1,382 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-06T03:38:16.313297+00:00",
+  "title": "Design System: DB 설계 실험실",
+  "extensions": {
+    "colorMeta": {
+      "console-blue": {
+        "role": "primary",
+        "displayName": "Console Blue",
+        "canonical": "#0a6cce",
+        "dark": "#5aa3ec",
+        "tonalRamp": [
+          "#0d2a4a",
+          "#0c3f73",
+          "#075aac",
+          "#0a6cce",
+          "#3d8bdc",
+          "#7db6f0",
+          "#b9d7f6",
+          "#e9f2fc"
+        ]
+      },
+      "console-blue-hover": {
+        "role": "primary",
+        "displayName": "Console Blue Deep",
+        "canonical": "#075aac",
+        "dark": "#7db6f0"
+      },
+      "console-blue-soft": {
+        "role": "primary",
+        "displayName": "Selection Wash",
+        "canonical": "#e9f2fc",
+        "dark": "#13253b"
+      },
+      "header-carbon": {
+        "role": "neutral",
+        "displayName": "Header Carbon",
+        "canonical": "#161a21",
+        "dark": "#0b0d11"
+      },
+      "work-plane": {
+        "role": "neutral",
+        "displayName": "Work Plane Gray",
+        "canonical": "#f1f2f4",
+        "dark": "#0f1216"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Container White",
+        "canonical": "#ffffff",
+        "dark": "#161a20"
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Header Row Gray",
+        "canonical": "#f7f8fa",
+        "dark": "#1b2027"
+      },
+      "surface-3": {
+        "role": "neutral",
+        "displayName": "Pressed Gray",
+        "canonical": "#eceef2",
+        "dark": "#232932"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e1e4e9",
+        "dark": "#29303a"
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Control Outline",
+        "canonical": "#c8cdd5",
+        "dark": "#3a4250"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0f1419",
+        "dark": "#eef1f5",
+        "tonalRamp": [
+          "#0f1419",
+          "#262e38",
+          "#3c4654",
+          "#646e7c",
+          "#8b94a2",
+          "#c8cdd5",
+          "#e1e4e9",
+          "#f7f8fa"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Secondary Ink",
+        "canonical": "#3c4654",
+        "dark": "#b6bec9"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Caption Gray",
+        "canonical": "#646e7c",
+        "dark": "#8b94a2"
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Success Green",
+        "canonical": "#0ca30c",
+        "dark": "#2bb52b"
+      },
+      "error": {
+        "role": "status",
+        "displayName": "Error Red",
+        "canonical": "#d03b3b",
+        "dark": "#ef5b5b"
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning Amber",
+        "canonical": "#d98a00",
+        "dark": "#e9a12a"
+      },
+      "info": {
+        "role": "status",
+        "displayName": "Info Blue",
+        "canonical": "#2a78d6",
+        "dark": "#3987e5"
+      },
+      "series-a": {
+        "role": "dataviz",
+        "displayName": "Series Blue",
+        "canonical": "#2a78d6",
+        "dark": "#3987e5"
+      },
+      "series-b": {
+        "role": "dataviz",
+        "displayName": "Series Orange",
+        "canonical": "#eb6834",
+        "dark": "#d95926"
+      },
+      "heatmap-ramp": {
+        "role": "dataviz",
+        "displayName": "Sequential Blue Ramp",
+        "canonical": "#2a78d6",
+        "tonalRamp": [
+          "#cde2fb",
+          "#b7d3f6",
+          "#9ec5f4",
+          "#86b6ef",
+          "#6da7ec",
+          "#5598e7",
+          "#3987e5",
+          "#2a78d6",
+          "#256abf",
+          "#1c5cab",
+          "#184f95",
+          "#104281",
+          "#0d366b"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page Title",
+        "purpose": "h1 page title, with the inline 정보 link."
+      },
+      "title": {
+        "displayName": "Container Title",
+        "purpose": "Container, experiment guide and help panel headings."
+      },
+      "stat": {
+        "displayName": "Stat",
+        "purpose": "Summary measurements on experiment pages, tabular numbers."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text and page descriptions (max 82ch)."
+      },
+      "body-dense": {
+        "displayName": "Dense Body",
+        "purpose": "Tables, buttons, nav links, alerts, help body."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers, key-value keys, guide cell headings, hints. Never uppercase-tracked."
+      },
+      "mono": {
+        "displayName": "Machine Text",
+        "purpose": "Code, SQL, column names, SQLSTATE codes, numeric inputs, measurements only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hairline-lift",
+        "value": "0 1px 2px rgb(15 20 25 / 0.04)",
+        "purpose": "Resting containers and ERD nodes."
+      },
+      {
+        "name": "panel",
+        "value": "0 8px 24px rgb(15 20 25 / 0.12), 0 1px 3px rgb(15 20 25 / 0.08)",
+        "purpose": "Tooltips, popovers, help panel overlay on narrow screens. Dark: 0 8px 24px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35)."
+      },
+      {
+        "name": "selection-halo",
+        "value": "0 0 0 3px var(--accent-soft)",
+        "purpose": "Selected ERD node."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid var(--accent); outline-offset: 2px",
+        "purpose": "All :focus-visible."
+      }
+    ],
+    "motion": [
+      {
+        "name": "spinner",
+        "value": "spin 0.7s linear infinite",
+        "purpose": "Button loading; slowed to 2s under reduced motion."
+      },
+      {
+        "name": "skeleton-shimmer",
+        "value": "shimmer 1.4s ease-in-out infinite",
+        "purpose": "Loading placeholders; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "640px"
+      },
+      {
+        "name": "compact",
+        "value": "960px"
+      },
+      {
+        "name": "medium",
+        "value": "1100px"
+      },
+      {
+        "name": "wide",
+        "value": "1200px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action of an area, top right.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><path d=\"M4.5 2.8v10.4L13 8 4.5 2.8z\"/></svg>실행</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:1px solid var(--line-strong,#c8cdd5);border-radius:5px;background:var(--surface,#fff);color:var(--ink,#0f1419);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}.ds-btn-primary{border-color:var(--accent,#0a6cce);background:var(--accent,#0a6cce);color:var(--on-accent,#fff)}.ds-btn-primary:hover{border-color:var(--accent-hover,#075aac);background:var(--accent-hover,#075aac)}.ds-btn:focus-visible{outline:2px solid var(--accent,#0a6cce);outline-offset:2px}"
+    },
+    {
+      "name": "Normal Button",
+      "kind": "button",
+      "refersTo": "button-normal",
+      "description": "Secondary actions.",
+      "html": "<button class=\"ds-btn-normal\">초기화</button>",
+      "css": ".ds-btn-normal{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:1px solid var(--line-strong,#c8cdd5);border-radius:5px;background:var(--surface,#fff);color:var(--ink,#0f1419);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}.ds-btn-normal:hover{border-color:var(--ink-2,#3c4654);background:var(--surface-2,#f7f8fa)}.ds-btn-normal:active{background:var(--surface-3,#eceef2)}.ds-btn-normal:focus-visible{outline:2px solid var(--accent,#0a6cce);outline-offset:2px}"
+    },
+    {
+      "name": "Container",
+      "kind": "card",
+      "refersTo": "container",
+      "description": "White 1px-line region with title, one-line description and actions.",
+      "html": "<section class=\"ds-container\"><header class=\"ds-container-head\"><div><h2>결정 기록 <button class=\"ds-info\">정보</button></h2><p>Q번호마다 결정과 검증 실험</p></div></header><div class=\"ds-container-body\">본문</div></section>",
+      "css": ".ds-container{border:1px solid var(--line,#e1e4e9);border-radius:8px;background:var(--surface,#fff);box-shadow:0 1px 2px rgb(15 20 25/.04)}.ds-container-head{padding:14px 20px;border-bottom:1px solid var(--line,#e1e4e9)}.ds-container-head h2{margin:0;font-size:15px;font-weight:700}.ds-container-head p{margin:3px 0 0;color:var(--muted,#646e7c);font-size:13px}.ds-container-body{padding:16px 20px;font-size:14px}.ds-info{margin-left:10px;padding:0;border:0;background:none;color:var(--accent,#0a6cce);font:inherit;font-size:13px;font-weight:600;cursor:pointer}.ds-info:hover{text-decoration:underline}"
+    },
+    {
+      "name": "Status Indicator",
+      "kind": "chip",
+      "description": "Icon plus word; never color alone.",
+      "html": "<span class=\"ds-status\" data-s=\"success\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 14.5A6.5 6.5 0 108 1.5a6.5 6.5 0 000 13zM5.2 8.2l1.9 1.9 3.8-4\"/></svg><span>거부됨</span></span> <span class=\"ds-status\" data-s=\"error\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 14.5A6.5 6.5 0 108 1.5a6.5 6.5 0 000 13zM5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4\"/></svg><span>중복 발생</span></span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:14px;white-space:nowrap}.ds-status[data-s=success]{color:var(--success-ink,#0a6e0a)}.ds-status[data-s=error]{color:var(--error-ink,#b02a2a)}"
+    },
+    {
+      "name": "Side Navigation",
+      "kind": "nav",
+      "refersTo": "sidenav-item-current",
+      "description": "Step navigation with numbered circles and indented page links.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-step\"><span class=\"ds-n\">1</span>ERD</div><a href=\"#\" aria-current=\"page\">개요</a><a href=\"#\">제약조건</a><a href=\"#\">동시 INSERT</a></nav>",
+      "css": ".ds-nav{width:248px;padding:12px 0;background:var(--surface,#fff);border-right:1px solid var(--line,#e1e4e9)}.ds-step{display:flex;align-items:center;gap:8px;padding:0 20px 6px;font-size:13px;font-weight:700}.ds-n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent,#0a6cce);color:#fff;font-size:11px}.ds-nav a{display:block;padding:6px 20px 6px 48px;color:var(--ink-2,#3c4654);font-size:13.5px;text-decoration:none}.ds-nav a:hover{background:var(--surface-2,#f7f8fa);color:var(--ink,#0f1419)}.ds-nav a[aria-current=page]{background:var(--accent-soft,#e9f2fc);color:var(--accent,#0a6cce);font-weight:600;box-shadow:inset 2px 0 0 var(--accent,#0a6cce)}"
+    },
+    {
+      "name": "Data Table",
+      "kind": "custom",
+      "refersTo": "table-header",
+      "description": "Decision-record and result table.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Q</th><th>결정</th><th class=\"num\">시간</th></tr></thead><tbody><tr><td class=\"q\">Q16</td><td>concerts.venue_id에 인덱스</td><td class=\"num\">0.42ms</td></tr><tr><td class=\"q\">Q9</td><td>(concert_id, seat_id) UNIQUE</td><td class=\"num\">1.08ms</td></tr></tbody></table>",
+      "css": ".ds-table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surface,#fff)}.ds-table th,.ds-table td{padding:10px 16px;border-bottom:1px solid var(--line,#e1e4e9);text-align:left}.ds-table th{background:var(--surface-2,#f7f8fa);color:var(--ink-2,#3c4654);font-size:12.5px;font-weight:700}.ds-table .num{text-align:right;font-variant-numeric:tabular-nums}.ds-table .q{color:var(--ink-2,#3c4654);font-weight:700}.ds-table tbody tr:hover td{background:var(--surface-2,#f7f8fa)}"
+    },
+    {
+      "name": "Experiment Guide",
+      "kind": "custom",
+      "description": "실험 안내: four one-line cells at the top of every experiment page.",
+      "html": "<section class=\"ds-guide\"><header><h2>실험 안내</h2><button>자세히</button></header><div class=\"ds-grid\"><div><h3>확인할 것</h3>UNIQUE가 중복을 막는가</div><div><h3>방법</h3>동시에 INSERT 20번</div><div><h3>읽는 법</h3>주황 막대가 겹치면 경쟁</div><div class=\"ds-res\"><h3>결과</h3>중복 0건</div></div></section>",
+      "css": ".ds-guide{border:1px solid var(--line,#e1e4e9);border-radius:8px;background:var(--surface,#fff)}.ds-guide header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line,#e1e4e9)}.ds-guide h2{margin:0;font-size:15px}.ds-guide header button{border:0;background:none;color:var(--accent,#0a6cce);font:inherit;font-size:13px;font-weight:600;cursor:pointer}.ds-grid{display:grid;grid-template-columns:repeat(4,1fr)}.ds-grid>div{padding:12px 20px 14px;font-size:14px;line-height:1.45}.ds-grid>div+div{border-left:1px solid var(--line,#e1e4e9)}.ds-grid h3{margin:0 0 4px;color:var(--muted,#646e7c);font-size:12px;font-weight:600}.ds-res{background:var(--surface-2,#f7f8fa);font-weight:600;color:var(--success-ink,#0a6e0a)}"
+    },
+    {
+      "name": "Numeric Input",
+      "kind": "input",
+      "refersTo": "input-number",
+      "description": "Simulation parameter input, mono and right-aligned.",
+      "html": "<label class=\"ds-param\">동시 사용자 <input value=\"20\"/> 명</label>",
+      "css": ".ds-param{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted,#646e7c)}.ds-param input{width:72px;height:30px;padding:0 8px;border:1px solid var(--line-strong,#c8cdd5);border-radius:5px;background:var(--surface,#fff);color:var(--ink,#0f1419);font-family:ui-monospace,Menlo,monospace;font-size:13px;text-align:right}.ds-param input:focus-visible{outline:2px solid var(--accent,#0a6cce);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Evidence Console",
+    "overview": "The lab is a cloud console in the Datadog and AWS console canon, played straight. A dark global header sits over a cool gray work plane; everything the visitor reads lives in white containers drawn with 1px lines. The protagonists are decision-record tables and experiment screens (trace waterfall, heatmap, bar comparison, EXPLAIN plan tree, live ERD), never marketing heroes or card grids.\n\nDensity is console-grade but the text load is light. Every item shows one short line by default, plus numbers and charts; anything longer sits behind a \"자세히\" disclosure or in a topic of the right-hand \"정보\" help panel. Copy is Korean, plain and short. Color is almost entirely neutral: one console blue carries interaction, a small status set carries outcomes (always with an icon and a word), and a validated two-series dataviz pair carries chart data.\n\nConfirmed rejections: AI-looking light purple and lavender accents (banned by the owner), landing-page heroes, card grids, eyebrow labels above headings, and unicode glyphs standing in for icons.",
+    "keyCharacteristics": [
+      "Dark 44px global header, 248px white step navigation, gray work plane, optional 360px help panel on the right.",
+      "White 1px-line containers with a title row, short description and right-aligned actions.",
+      "Console blue only for links, primary buttons and selection.",
+      "Status is icon + text, never color alone.",
+      "Pretendard for UI; system mono only for code, column names, SQLSTATE codes and measurements.",
+      "Light mode and a full dark mode driven by `prefers-color-scheme`."
+    ],
+    "rules": [
+      {
+        "name": "The Interaction-Only Blue Rule",
+        "body": "Console blue marks something you can click or something you have selected. It never decorates a heading, a number, a chart series or a background panel.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Lavender Rule",
+        "body": "No light purple, lavender or violet anywhere, in either mode, including tints, halos and gradients. The owner banned it; it does not come back.",
+        "section": "colors"
+      },
+      {
+        "name": "The Series Are Not Status Rule",
+        "body": "Chart series take only series-a, series-b or the sequential blue ramp. Success, error and warning colors appear in charts only as outcome markers that also carry an icon and a legend label, never as a data series.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Line Rule",
+        "body": "The default view shows one short line per item plus numbers and charts. Longer explanation goes behind \"자세히\" or into a help-panel topic, never into the default view.",
+        "section": "typography"
+      },
+      {
+        "name": "The Machine Text Rule",
+        "body": "Mono is reserved for code, identifiers, SQLSTATE codes and measurements. Prose, labels and headings are always Pretendard.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Numbers Rule",
+        "body": "Every measurement column and stat uses tabular numerals and right alignment in tables.",
+        "section": "typography"
+      },
+      {
+        "name": "The First Viewport Rule",
+        "body": "Left: step navigation. Right: breadcrumbs, title with \"정보\", one-line description, primary action at top right; then the step summary or the experiment guide.",
+        "section": "layout"
+      },
+      {
+        "name": "The Floating-Only Shadow Rule",
+        "body": "A real shadow means the element floats above the page (tooltip, overlay panel). Anything that sits in the flow is drawn with lines.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the default view to one short line per item, plus numbers and charts; put long explanation behind \"자세히\" or in a help-panel topic.",
+      "Do pair every status color with an icon and a word (success, error, warning, info, stopped, pending).",
+      "Do reserve console blue (#0a6cce, dark #5aa3ec) for links, primary buttons, selection and focus.",
+      "Do draw chart series only from series-a #2a78d6 / series-b #eb6834 (dark #3987e5 / #d95926), and heatmaps only from the sequential blue ramp.",
+      "Do set code, column names, SQLSTATE codes and measurements in system mono with tabular numbers; everything else in Pretendard.",
+      "Do build pages from the shell: dark header, step nav, breadcrumbs, title with \"정보\", containers with 1px lines.",
+      "Do mark planned steps and tables as planned (muted, dashed, badge) and never draw them as decided.",
+      "Do write Korean UI copy plain and short."
+    ],
+    "donts": [
+      "Don't use light purple, lavender or violet in any form.",
+      "Don't use status colors (success, error, warning) as chart series colors.",
+      "Don't put eyebrow or kicker labels above headings.",
+      "Don't use unicode glyphs (arrows, checkmarks, bullets, stars) as icons; draw them in the 16px icon set.",
+      "Don't build marketing heroes or card grids; decisions are tables, experiments are screens.",
+      "Don't put shadows on in-flow elements beyond the hairline lift.",
+      "Don't hard-code hex values in components; use the tokens so dark mode follows."
+    ]
+  }
+}
