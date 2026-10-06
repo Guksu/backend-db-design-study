@@ -144,10 +144,10 @@ export const DECISIONS: Decision[] = [
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
   {
-    q: 'Q25 – Q30',
+    q: 'Q25 – Q31',
     topic: 'grades',
-    decision: '공연마다 정한다 (concerts 1 : N grades). name VARCHAR(20) · color 팔레트 키 CHECK · sort_order > 0, 공연 안에서 name과 sort_order는 각각 UNIQUE',
-    why: '공연마다 등급 구성과 이름이 다르다. 함께 쓰면 한 공연의 수정이 다른 공연 좌석맵을 바꾼다',
-    open: true,
+    decision: '공연마다 정한다 (concerts 1 : N grades). name VARCHAR(20) · color 팔레트 키 CHECK · sort_order > 0(10 간격), 공연 안에서 name과 sort_order는 각각 UNIQUE',
+    why: '공연마다 등급 구성과 이름이 다르다. 색은 디자인 시스템과 함께 배포로 바뀐다. 끼워 넣기는 INSERT 한 번으로 끝나야 한다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
   },
 ];

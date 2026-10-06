@@ -22,9 +22,9 @@ FROM concerts c,
              ('2026-12-25 18:00+09'::timestamptz, '2026-10-08 20:00+09'::timestamptz)) AS s (starts_at, booking_opens_at)
 WHERE c.title = '스터디 콘서트';
 
--- 등급 3개 (Q25–Q30): 스터디 콘서트의 등급 목록, 팔레트 키, 범례 순서
+-- 등급 3개 (Q25–Q31): 스터디 콘서트의 등급 목록, 팔레트 키, 범례 순서(10 간격이라 사이에 끼워 넣기 쉽다)
 INSERT INTO grades (concert_id, name, color, sort_order)
 SELECT c.id, g.name, g.color, g.sort_order
 FROM concerts c,
-     (VALUES ('VIP', 'red', 1), ('R', 'green', 2), ('S', 'blue', 3)) AS g (name, color, sort_order)
+     (VALUES ('VIP', 'red', 10), ('R', 'green', 20), ('S', 'blue', 30)) AS g (name, color, sort_order)
 WHERE c.title = '스터디 콘서트';

@@ -197,9 +197,9 @@ describe('Q25 – Q30. grades', () => {
       WHERE c.title = '스터디 콘서트' ORDER BY g.sort_order
     `);
     expect(rows).toEqual([
-      { name: 'VIP', color: 'red', sort_order: 1 },
-      { name: 'R', color: 'green', sort_order: 2 },
-      { name: 'S', color: 'blue', sort_order: 3 },
+      { name: 'VIP', color: 'red', sort_order: 10 },
+      { name: 'R', color: 'green', sort_order: 20 },
+      { name: 'S', color: 'blue', sort_order: 30 },
     ]);
 
     const grades = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'grades');
@@ -248,6 +248,71 @@ describe('Q28 · Q29. 등급 색은 팔레트 키', () => {
     for (const { light, dark } of Object.values(GRADE_PALETTE)) {
       expect(contrast(light, '#ffffff')).toBeGreaterThanOrEqual(3);
       expect(contrast(dark, '#161a20')).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe('Q30 · Q31. 등급 순서 미루기', () => {
+  /** 임시 테이블에 행을 주어진 순서로 저장한 뒤, 2 이상을 한 칸씩 미루는 UPDATE를 보낸다 */
+  async function shift(stored: number[], deferrable: boolean) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`
+        CREATE TEMP TABLE lab_sort (
+          sort_order INTEGER NOT NULL CHECK (sort_order > 0),
+          UNIQUE (sort_order) ${deferrable ? 'DEFERRABLE INITIALLY IMMEDIATE' : ''}
+        ) ON COMMIT DROP
+      `);
+      for (const n of stored) await client.query(`INSERT INTO lab_sort VALUES ($1)`, [n]);
+      await client.query(`UPDATE lab_sort SET sort_order = sort_order + 1 WHERE sort_order >= 2`);
+      return 'ok';
+    } catch (err) {
+      return (err as { code?: string }).code;
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
+  }
+
+  it('일반 UNIQUE는 행마다 검사해서, 같은 UPDATE가 행이 저장된 순서에 따라 실패하거나 성공한다', async () => {
+    expect(await shift([1, 2, 3], false)).toBe('23505');
+    expect(await shift([3, 2, 1], false)).toBe('ok');
+  });
+
+  it('DEFERRABLE UNIQUE는 문장이 끝난 뒤 검사해서 저장 순서와 상관없이 성공한다', async () => {
+    expect(await shift([1, 2, 3], true)).toBe('ok');
+  });
+
+  it('드물게 번호를 다시 매길 때: 큰 값으로 옮겼다가 내리면 CHECK (> 0)과 일반 UNIQUE를 지키며 성공한다', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`
+        CREATE TEMP TABLE lab_sort (name TEXT, sort_order INTEGER NOT NULL CHECK (sort_order > 0) UNIQUE)
+        ON COMMIT DROP
+      `);
+      // 간격이 바닥난 상태: VIP 10, SR 11, R 12, S 13 (저장 순서도 그대로)
+      for (const [name, n] of [['VIP', 10], ['SR', 11], ['R', 12], ['S', 13]] as const) {
+        await client.query(`INSERT INTO lab_sort VALUES ($1, $2)`, [name, n]);
+      }
+      // 1단계: 지금 값과 절대 겹치지 않는 큰 값으로 옮긴다. 2단계: 10 간격으로 내린다
+      await client.query(`
+        UPDATE lab_sort s SET sort_order = 1000000 + r.rank * 10
+        FROM (SELECT name, row_number() OVER (ORDER BY sort_order) AS rank FROM lab_sort) r
+        WHERE r.name = s.name
+      `);
+      await client.query(`UPDATE lab_sort SET sort_order = sort_order - 1000000`);
+      const { rows } = await client.query(`SELECT name, sort_order FROM lab_sort ORDER BY sort_order`);
+      expect(rows).toEqual([
+        { name: 'VIP', sort_order: 10 },
+        { name: 'SR', sort_order: 20 },
+        { name: 'R', sort_order: 30 },
+        { name: 'S', sort_order: 40 },
+      ]);
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
     }
   });
 });
