@@ -164,4 +164,11 @@ export const DECISIONS: Decision[] = [
     why: 'FK 하나는 행이 있는지만 본다. 규칙을 테이블 정의에 두면 모든 쓰기 경로를 DB가 막는다',
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
+  {
+    q: 'Q37',
+    topic: '회차 좌석의 FK 인덱스',
+    decision: '등급 · 좌석 · 공연 쪽 복합 FK에는 인덱스를 두지 않는다',
+    why: '부모 삭제는 드물고, 이 테이블은 쓰기가 가장 잦다 (Q16의 기준)',
+    verify: { page: 'index', label: 'FK 인덱스 비교' },
+  },
 ];

@@ -888,7 +888,22 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 - 합의: 복합 FK로 다른 공연의 등급 · 다른 공연장의 좌석을 막는다
 - 반영: `schedule_seats`에 `concert_id` · `venue_id` (NOT NULL, 검증용 복사본), FK 네 개, 부모 네 테이블에 `UNIQUE (id, concert_id)` · `UNIQUE (id, venue_id)`. 제약조건 검증 2개 추가(거짓 concert_id · 공연장 바꾸기), 2개는 "들어감"에서 "거부"로
 
-## SQL 반영 (Q4~Q36)
+#### Q37. 복합 FK의 자식 쪽(`schedule_seats`)에 인덱스를 만들까?
+
+**내 답**: 등급 삭제는 드무니 인덱스를 만들지 않는다.
+
+**피드백**: Q16의 기준을 그대로 썼다. 맞다.
+
+- **대가는 드물게 한 번 치른다.** 인덱스가 없으면 등급을 지울 때 FK 검사가 `schedule_seats` 전체를 읽는다. Q22 실험에서 100만 행 테이블의 FK 검사가 Seq Scan으로 약 27ms였다. 어드민이 가끔 하는 일이라면 감당할 만하다. 반대로 인덱스는 회차 좌석을 만들고 상태를 바꿀 때마다 함께 고쳐야 하는데, 이 테이블은 쓰기가 가장 잦다.
+- **지울 수 있는 경우도 좁다.** 이미 회차 좌석이 가리키는 등급은 FK가 지우지 못하게 막는다. 실제로 지워지는 건 아무 좌석에도 쓰이지 않은 등급뿐이고, 검사는 "가리키는 행이 하나도 없다"를 확인하는 데 쓰인다.
+- **나머지 둘도 같은 기준**: 공연장 좌석 배치를 바꾸는 일(`seat_fk`)과 공연 삭제 · 공연장 변경(`concert_fk`)은 등급 삭제보다도 드물다. 그래서 셋 다 만들지 않는 것으로 정리했다(다르게 하고 싶으면 다시 정한다).
+
+**정리**
+
+- 합의: `schedule_seats`의 `grade_fk` · `seat_fk` · `concert_fk` 쪽에는 인덱스를 두지 않는다. `schedule_fk`는 UNIQUE (schedule_id, seat_id)가 받친다
+- 반영: 스키마 변경 없음. FK 주석에 이유를 남기고, 테스트가 `schedule_seats`의 인덱스가 PK와 UNIQUE 둘뿐인지 확인한다
+
+## SQL 반영 (Q4~Q37)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`, `seat_status`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
@@ -978,5 +993,4 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 - 하루 단위 전체 회차 조회가 잦아지면 `starts_at` 인덱스를 따로 둘까? (Q22)
 - "오픈 일정 추후 공지"인 회차를 먼저 등록해야 한다면 `booking_opens_at`의 NOT NULL을 어떻게 할까? (Q24)
 - `VIP`와 `vip`, `VIP `(끝 공백)를 같은 이름으로 보고 막을까? 막는다면 애플리케이션과 DB 중 어디서? (Q27)
-- `schedule_seats.seat_id` · `grade_id`에 FK 인덱스가 필요할까? 좌석 · 등급을 지울 일이 얼마나 있나? (Q33)
 - 회차를 만들 때 좌석마다 등급을 어디서 가져와 채울까? (Q8, Q33)

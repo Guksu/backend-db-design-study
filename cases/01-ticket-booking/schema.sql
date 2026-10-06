@@ -130,9 +130,9 @@ COMMENT ON CONSTRAINT schedule_seats_schedule_seat_uq ON schedule_seats IS '한 
 COMMENT ON COLUMN schedule_seats.concert_id IS '검증용 복사본. 회차와 등급이 같은 공연의 것임을 복합 FK로 강제한다 (Q36)';
 COMMENT ON COLUMN schedule_seats.venue_id IS '검증용 복사본. 좌석이 공연의 공연장 것임을 복합 FK로 강제한다 (Q36)';
 COMMENT ON CONSTRAINT schedule_seats_schedule_fk ON schedule_seats IS '회차와 그 회차의 공연 (Q36)';
-COMMENT ON CONSTRAINT schedule_seats_grade_fk ON schedule_seats IS '등급이 같은 공연의 것이어야 한다. 다른 공연의 등급 금지 (Q25, Q36)';
-COMMENT ON CONSTRAINT schedule_seats_concert_fk ON schedule_seats IS '공연과 그 공연의 공연장 (Q36)';
-COMMENT ON CONSTRAINT schedule_seats_seat_fk ON schedule_seats IS '좌석이 공연의 공연장 것이어야 한다. 다른 공연장 좌석 금지 (Q35, Q36)';
+COMMENT ON CONSTRAINT schedule_seats_grade_fk ON schedule_seats IS '등급이 같은 공연의 것이어야 한다. 다른 공연의 등급 금지 (Q25, Q36). 등급 삭제가 드물어 자식 쪽 인덱스는 두지 않는다 (Q37)';
+COMMENT ON CONSTRAINT schedule_seats_concert_fk ON schedule_seats IS '공연과 그 공연의 공연장 (Q36). 공연 삭제 · 공연장 변경이 드물어 자식 쪽 인덱스는 두지 않는다 (Q37)';
+COMMENT ON CONSTRAINT schedule_seats_seat_fk ON schedule_seats IS '좌석이 공연의 공연장 것이어야 한다. 다른 공연장 좌석 금지 (Q35, Q36). 좌석 배치 변경이 드물어 자식 쪽 인덱스는 두지 않는다 (Q37)';
 COMMENT ON CONSTRAINT seats_id_venue_uq ON seats IS '복합 FK (seat_id, venue_id)의 대상 (Q36)';
 COMMENT ON CONSTRAINT concerts_id_venue_uq ON concerts IS '복합 FK (concert_id, venue_id)의 대상 (Q36)';
 COMMENT ON CONSTRAINT schedules_id_concert_uq ON schedules IS '복합 FK (schedule_id, concert_id)의 대상 (Q36)';

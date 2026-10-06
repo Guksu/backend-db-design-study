@@ -336,7 +336,7 @@ describe('Q32 · Q33. schedule_seats', () => {
     expect(rows[0]).toEqual({ total: 2000, schedules: 2, other_concert_grade: 0 });
   });
 
-  it('UNIQUE (schedule_id, seat_id)이 회차별 좌석맵 조회와 schedule_id FK 검사를 겸한다', async () => {
+  it('UNIQUE (schedule_id, seat_id)이 좌석맵 조회와 회차 FK 검사를 겸하고, 나머지 FK에는 인덱스를 두지 않는다 (Q37)', async () => {
     const preview = await previewTable(pool, SCHEMA, 'schedule_seats');
     expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['schedule_seats_pkey', 'schedule_seats_schedule_seat_uq']);
     const schedules = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'schedule_seats');
