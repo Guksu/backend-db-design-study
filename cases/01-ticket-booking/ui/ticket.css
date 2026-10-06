@@ -1,0 +1,154 @@
+/* Case 01 화면 전용 스타일 */
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* 개요: 처음 오셨다면 */
+.guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: guide;
+}
+
+@media (max-width: 960px) {
+  .guide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.guide li {
+  position: relative;
+  padding-left: 34px;
+  counter-increment: guide;
+}
+
+.guide li::before {
+  content: counter(guide);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.guide strong {
+  font-size: 14px;
+}
+
+.guide p {
+  margin-top: 3px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+
+/* 제약조건 검증 표 */
+.checks-table .rule {
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.checks-table .expandable {
+  cursor: pointer;
+}
+
+.row-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-toggle svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.sqlstate {
+  margin-left: 4px;
+}
+
+.detail-row td {
+  background: var(--surface-2);
+}
+
+.table tbody tr.detail-row:hover td {
+  background: var(--surface-2);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+}
+
+@media (max-width: 960px) {
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.detail-grid h4 {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.detail-grid pre {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 인덱스 비교 */
+.hypothesis {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  font-size: 13px;
+}
+
+.table .claim {
+  min-width: 220px;
+  font-weight: 600;
+}
+
+/* 시간 타입 비교 */
+.time-table thead tr:first-child th[colspan] {
+  text-align: center;
+  border-left: 1px solid var(--line);
+}
+
+.time-table thead tr:nth-child(2) th:nth-child(odd),
+.time-table tbody td:nth-child(even),
+.time-table tfoot td:nth-child(2),
+.time-table tfoot td:nth-child(3) {
+  border-left: 1px solid var(--line);
+}
+
+.time-table tfoot td {
+  border-top: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  font-weight: 600;
+}

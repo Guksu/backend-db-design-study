@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TicketCase } from '../../cases/01-ticket-booking/ui/TicketCase';
 import { HELP_TOPICS } from './help/topics';
 import { api } from './lib/api';
 import { HelpProvider, useHelp } from './ui/Help';
@@ -9,6 +10,7 @@ export function App() {
     <HelpProvider topics={HELP_TOPICS}>
       <div className="app">
         <GlobalHeader />
+        <TicketCase />
       </div>
     </HelpProvider>
   );
