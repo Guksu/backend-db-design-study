@@ -136,4 +136,11 @@ export const DECISIONS: Decision[] = [
     why: '공연을 먼저 정하고 시각을 찾는다. 앞 컬럼이 concert_id라 공연별 조회와 FK 검사를 이 인덱스가 맡는다',
     verify: { page: 'index-order', label: '복합 인덱스 순서' },
   },
+  {
+    q: 'Q23',
+    topic: '예매 오픈 시각',
+    decision: '회차(schedules)에 둔다. 컬럼 정의는 다음 문답에서',
+    why: '한 공연 안에서도 1차 오픈 · 추가 회차처럼 회차마다 오픈 시각이 다를 수 있다',
+    open: true,
+  },
 ];
