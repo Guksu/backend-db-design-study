@@ -43,6 +43,8 @@ CREATE TABLE grades (
   id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   concert_id BIGINT      NOT NULL REFERENCES concerts (id),
   name       VARCHAR(20) NOT NULL CHECK (name <> ''),
+  -- 키 목록은 gradePalette.ts(디자인 시스템)와 같아야 한다. 색을 더할 때 같은 배포에서 함께 고친다
+  color      VARCHAR(20) NOT NULL CHECK (color IN ('red', 'orange', 'gold', 'green', 'teal', 'blue', 'pink', 'gray')),
   CONSTRAINT grades_concert_name_uq UNIQUE (concert_id, name)
 );
 
@@ -81,4 +83,6 @@ COMMENT ON COLUMN grades.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
 COMMENT ON COLUMN grades.concert_id IS '어느 공연의 등급인가 (Q25)';
 COMMENT ON COLUMN grades.name IS '화면에 보이는 등급 이름. 20글자 제한 (Q27)';
 COMMENT ON CONSTRAINT grades_name_check ON grades IS '빈 문자열 금지 (Q27)';
+COMMENT ON COLUMN grades.color IS '디자인 시스템의 팔레트 키. 실제 색은 화면이 정한다 (Q28)';
+COMMENT ON CONSTRAINT grades_color_check ON grades IS '팔레트 키만 허용. 색 추가는 디자인 시스템 배포와 함께 가므로 CHECK (Q29)';
 COMMENT ON CONSTRAINT grades_concert_name_uq ON grades IS '한 공연에 같은 이름의 등급 금지 (Q27). concert_id가 앞이라 FK 인덱스도 겸한다 (Q22와 같은 이유)';

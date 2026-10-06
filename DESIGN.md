@@ -173,6 +173,7 @@ A neutral console palette with a single interactive blue, a semantic status set,
 ### Data visualization
 - **Series A, blue** (#2a78d6; dark #3987e5) and **Series B, orange** (#eb6834; dark #d95926): the validated dataviz pair. In the race trace, A is the SELECT segment and B the INSERT segment; in the index comparison, A and B are the two configurations. The wait between them is Muted with a hatch mask.
 - **Sequential blue ramp** (13 steps, #cde2fb to #0d366b, reversed in dark mode so "0" is darkest): the heatmap's only fill. Cell text flips between white and near-black at the ramp's midpoint.
+- **Seat grade palette** (`cases/01-ticket-booking/gradePalette.ts`: red, orange, gold, green, teal, blue, pink, gray, each with a light and a dark value): the DB stores only the key in `grades.color` (Q28, Q29) and the screen picks the value. It fills seat-map grade cells and their legend, nothing else. Every value holds 3:1 or more against `--surface` in both modes, and a test keeps the key list identical to the DB CHECK. There is no purple key, per the No Lavender Rule.
 
 ### Named Rules
 **The Interaction-Only Blue Rule.** Console blue marks something you can click or something you have selected. It never decorates a heading, a number, a chart series or a background panel.

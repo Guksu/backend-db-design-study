@@ -209,3 +209,37 @@ describe('Q25 · Q26 · Q27. grades', () => {
     expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['grades_concert_name_uq', 'grades_pkey']);
   });
 });
+
+describe('Q28 · Q29. 등급 색은 팔레트 키', () => {
+  it('DB의 CHECK 목록과 프론트엔드 팔레트의 키가 같다', async () => {
+    const { GRADE_COLORS } = await import('../gradePalette');
+    const { rows } = await pool.query(
+      `SELECT pg_get_constraintdef(c.oid) AS def
+       FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
+       WHERE n.nspname = $1 AND c.conname = 'grades_color_check'`,
+      [SCHEMA],
+    );
+    // 예: CHECK (((color)::text = ANY ((ARRAY['red'::character varying, ...])::text[])))
+    const keys = [...(rows[0].def as string).matchAll(/'([^']+)'::/g)].map((m) => m[1]);
+    expect([...keys].sort()).toEqual([...GRADE_COLORS].sort());
+  });
+
+  it('팔레트의 모든 색은 밝은 · 어두운 배경 모두에서 3:1 이상 대비가 난다', async () => {
+    const { GRADE_PALETTE } = await import('../gradePalette');
+    const luminance = (hex: string) => {
+      const [r, g, b] = [1, 3, 5]
+        .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const contrast = (a: string, b: string) => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    // styles.css의 --surface (밝은 화면 · 어두운 화면)
+    for (const { light, dark } of Object.values(GRADE_PALETTE)) {
+      expect(contrast(light, '#ffffff')).toBeGreaterThanOrEqual(3);
+      expect(contrast(dark, '#161a20')).toBeGreaterThanOrEqual(3);
+    }
+  });
+});

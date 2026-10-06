@@ -649,7 +649,34 @@ CREATE TABLE concerts (
 - 합의: `color`는 디자인 시스템의 팔레트 키를 저장한다. NOT NULL
 - 결정 대기: 허용 목록을 지키는 방법(CHECK · ENUM · 참조 테이블)과 키 목록 ← Q29
 
-## SQL 반영 (Q4~Q27)
+#### Q29. 팔레트 키 목록을 DB는 무엇으로 지킬까? (CHECK · ENUM · 참조 테이블)
+
+**내 답**: CHECK. 색 추가는 디자인 시스템 배포와 같이 가기 때문이다.
+
+**피드백**: 맞다. Q6의 기준("누가, 언제 바꾸나")을 그대로 썼다. 등급 이름은 운영자가 운영 중에 바꾸니 참조 테이블이었고, 팔레트 키는 개발자가 배포로 바꾸니 CHECK다.
+
+| 방법 | 이 경우의 문제 |
+|---|---|
+| 참조 테이블 | 운영자가 운영 중에 `teal`을 추가할 수 있다. 하지만 프론트엔드 팔레트에 `teal`이 없으면 좌석을 칠할 수 없다. DB와 화면이 어긋날 길을 열어 두는 셈이다 |
+| ENUM | 배포로 바꾼다는 점은 같다. 하지만 PostgreSQL ENUM은 값을 추가하거나 이름을 바꿀 수는 있어도 **뺄 수는 없다**. 색을 정리하려면 타입을 다시 만들어야 한다 |
+| CHECK | 마이그레이션에서 제약을 지우고 새 목록으로 다시 걸면 된다. 다시 걸 때 기존 행도 검사하므로, 아직 쓰는 색을 실수로 빼면 그 자리에서 실패한다 |
+
+**두 곳을 같게 유지하기**: 팔레트 키는 DB의 CHECK와 프론트엔드의 `gradePalette.ts` 두 곳에 있다. 한쪽만 고치는 실수를 막으려고, 테스트가 `pg_catalog`에서 CHECK 정의를 읽어 팔레트 키와 비교한다. 팔레트에만 `purple`을 넣어 보니 테스트가 실패했다(확인 후 되돌림).
+
+**함께 정한 것** (디자인 시스템 쪽이라 내가 정했다. 바꾸고 싶으면 말하기)
+
+- 키 8개: `red`, `orange`, `gold`, `green`, `teal`, `blue`, `pink`, `gray`. 실험실 디자인 규칙에 따라 보라 계열은 넣지 않았다
+- 키마다 밝은 화면 · 어두운 화면용 색. 좌석은 작은 그래픽이라 배경 대비 3:1 이상이어야 한다(WCAG 1.4.11). 가장 낮은 것도 3.85:1이고 테스트가 지킨다
+- 타입은 `name`과 같은 `VARCHAR(20)`. 값은 CHECK가 정하므로 길이는 거의 의미가 없다
+- 시드: VIP `red`, R `green`, S `blue`
+
+**정리**
+
+- 합의: `color VARCHAR(20) NOT NULL CHECK (color IN ('red', 'orange', 'gold', 'green', 'teal', 'blue', 'pink', 'gray'))`
+- 반영: schema.sql, seed.sql, `gradePalette.ts`, 제약조건 검증 3개(팔레트에 없는 키 · HEX · NULL), DB와 팔레트 동기화 테스트, 대비 테스트
+- 결정 대기: `sort_order` ← Q30
+
+## SQL 반영 (Q4~Q29)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
@@ -693,6 +720,7 @@ CREATE TABLE concerts (
 | Q27 | 다른 공연에 같은 이름의 등급 | 들어감 (의도) |
 | Q27 | 등급 이름 NULL · 빈 문자열 · 21글자 | 거부 `23502` · `23514` · `22001` |
 | Q25 | 없는 공연의 등급 | 거부 `23503` foreign_key_violation |
+| Q28 · Q29 | 팔레트에 없는 키(`purple`) · HEX(`#E74C3C`) · NULL | 거부 `23514` · `23514` · `23502` |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 
