@@ -316,3 +316,26 @@ describe('Q30 · Q31. 등급 순서 미루기', () => {
     }
   });
 });
+
+describe('Q32 · Q33. schedule_seats', () => {
+  it('회차를 만들 때 좌석 수만큼 미리 만든다: 회차 2개 × 1,000석 = 2,000행, 등급은 같은 공연의 것', async () => {
+    const { rows } = await pool.query(`
+      SELECT count(*)::int AS total,
+             count(DISTINCT ss.schedule_id)::int AS schedules,
+             count(*) FILTER (WHERE g.concert_id <> sc.concert_id)::int AS other_concert_grade
+      FROM schedule_seats ss
+      JOIN schedules sc ON sc.id = ss.schedule_id
+      JOIN grades g ON g.id = ss.grade_id
+    `);
+    expect(rows[0]).toEqual({ total: 2000, schedules: 2, other_concert_grade: 0 });
+  });
+
+  it('UNIQUE (schedule_id, seat_id)이 회차별 좌석맵 조회와 schedule_id FK 검사를 겸한다', async () => {
+    const preview = await previewTable(pool, SCHEMA, 'schedule_seats');
+    expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['schedule_seats_pkey', 'schedule_seats_schedule_seat_uq']);
+    const schedules = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'schedule_seats');
+    expect(schedules?.constraints).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'UNIQUE', columns: ['schedule_id', 'seat_id'] })]),
+    );
+  });
+});

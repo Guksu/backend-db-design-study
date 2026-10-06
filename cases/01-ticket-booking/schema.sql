@@ -50,6 +50,14 @@ CREATE TABLE grades (
   CONSTRAINT grades_concert_sort_uq UNIQUE (concert_id, sort_order)
 );
 
+CREATE TABLE schedule_seats (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  schedule_id BIGINT NOT NULL REFERENCES schedules (id),
+  seat_id     BIGINT NOT NULL REFERENCES seats (id),
+  grade_id    BIGINT NOT NULL REFERENCES grades (id),
+  CONSTRAINT schedule_seats_schedule_seat_uq UNIQUE (schedule_id, seat_id)
+);
+
 -- 설계 결정을 DB에도 남긴다. 시각화 화면의 ERD가 이 주석을 읽는다
 COMMENT ON TABLE venues IS '공연장 (정적). 총 좌석 수는 저장하지 않고 seats를 센다 (Q12)';
 COMMENT ON COLUMN venues.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
@@ -91,3 +99,10 @@ COMMENT ON COLUMN grades.sort_order IS '범례 · 가격표에 보일 순서. 1�
 COMMENT ON CONSTRAINT grades_sort_order_check ON grades IS '0 이하 금지 (Q30)';
 COMMENT ON CONSTRAINT grades_concert_sort_uq ON grades IS '한 공연 안에서 순서가 겹치면 범례 순서가 정해지지 않는다 (Q30)';
 COMMENT ON CONSTRAINT grades_concert_name_uq ON grades IS '한 공연에 같은 이름의 등급 금지 (Q27). concert_id가 앞이라 FK 인덱스도 겸한다 (Q22와 같은 이유)';
+
+COMMENT ON TABLE schedule_seats IS '회차별 좌석 (동적). 한 행 = 한 회차의 한 좌석. 회차를 만들 때 좌석 수만큼 미리 만든다 (Q1, Q2, Q32)';
+COMMENT ON COLUMN schedule_seats.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
+COMMENT ON COLUMN schedule_seats.schedule_id IS '어느 회차인가. 공연이 아니라 회차를 가리켜야 회차별 상태를 구분한다 (Q32)';
+COMMENT ON COLUMN schedule_seats.seat_id IS '어느 좌석인가 (Q33)';
+COMMENT ON COLUMN schedule_seats.grade_id IS '이 회차에서 이 좌석의 등급. 판매 기록의 스냅샷 (Q7, Q8)';
+COMMENT ON CONSTRAINT schedule_seats_schedule_seat_uq ON schedule_seats IS '한 회차에 같은 좌석 두 번 금지. 자연 키. schedule_id가 앞이라 회차별 좌석맵 조회와 FK 검사도 겸한다 (Q33)';

@@ -150,4 +150,11 @@ export const DECISIONS: Decision[] = [
     why: '공연마다 등급 구성과 이름이 다르다. 색은 디자인 시스템과 함께 배포로 바뀐다. 끼워 넣기는 INSERT 한 번으로 끝나야 한다',
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
+  {
+    q: 'Q32 · Q33',
+    topic: 'schedule_seats',
+    decision: '한 행 = 한 회차의 한 좌석. id · schedule_id · seat_id · grade_id · status, UNIQUE (schedule_id, seat_id). status는 다음 문답에서',
+    why: '같은 좌석도 회차마다 따로 팔리므로 FK는 공연이 아니라 회차를 가리킨다',
+    open: true,
+  },
 ];

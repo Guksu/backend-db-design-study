@@ -28,3 +28,13 @@ SELECT c.id, g.name, g.color, g.sort_order
 FROM concerts c,
      (VALUES ('VIP', 'red', 10), ('R', 'green', 20), ('S', 'blue', 30)) AS g (name, color, sort_order)
 WHERE c.title = '스터디 콘서트';
+
+-- 회차별 좌석 (Q2, Q33): 회차를 만들 때 공연장 좌석 수만큼 미리 만든다. 회차 2개 × 1,000석 = 2,000행
+-- 등급 배치는 실험용 예시다: A구역 VIP, B구역 R, C · D구역 S (회차를 만들 때 등급을 어디서 가져올지는 아직 정하지 않았다)
+INSERT INTO schedule_seats (schedule_id, seat_id, grade_id)
+SELECT sc.id, se.id, g.id
+FROM schedules sc
+JOIN concerts c ON c.id = sc.concert_id
+JOIN seats se ON se.venue_id = c.venue_id
+JOIN grades g ON g.concert_id = c.id
+ AND g.name = CASE se.section WHEN 'A' THEN 'VIP' WHEN 'B' THEN 'R' ELSE 'S' END;

@@ -751,9 +751,31 @@ PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 
 - 다듬은 정의: 한 행 = 한 회차의 한 좌석 (그 회차에서의 등급과 상태를 담는다)
 - 결정 대기: 이 정의에서 나오는 컬럼 목록 ← Q33
 
-## SQL 반영 (Q4~Q31)
+#### Q33. 다듬은 정의에서 `schedule_seats`의 컬럼을 뽑으면?
 
-`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
+**내 답**: `id`, `schedule_id`, `seat_id`, `grade_id`, `status`, `UNIQUE (schedule_id, seat_id)`.
+
+**피드백**: 정확하다. 정의의 명사 하나가 컬럼 하나가 됐고, Q9처럼 자연 키에 UNIQUE를 걸었다.
+
+- **UNIQUE (schedule_id, seat_id)**: 한 회차에 같은 좌석이 두 번 있으면 같은 자리를 두 번 팔 수 있다. 자연 키가 곧 "한 회차의 한 좌석"이라는 정의 그 자체다. `schedule_id`가 앞이라 좌석맵 조회(`WHERE schedule_id = ?`)와 회차 삭제 FK 검사도 이 인덱스로 한다(Q22).
+- **`id`도 둔다**: 자연 키가 있어도, 나중에 예약 이력(`reservations`)이 이 행을 가리킬 때 컬럼 하나짜리 짧은 키가 편하다(Q10의 대리 키).
+- **FK 컬럼 타입**: 지금까지의 규칙(BIGINT, Q18의 "NOT NULL은 당연히")을 따랐다.
+
+**반영하며 보인 것**
+
+- **Q2가 SQL 한 문장이 됐다**: 시드에서 `schedules × seats`를 JOIN해 회차 2개 × 1,000석 = 2,000행을 한 번에 만든다. 등급 배치(A구역 VIP, B구역 R, C · D구역 S)는 실험용 예시다. "회차를 만들 때 등급을 어디서 가져오나"는 아직 열려 있다.
+- **Q25의 구멍이 실제로 보인다**: 제약조건 검증에 "스터디 콘서트 회차의 좌석에 다른 공연의 등급을 붙인다"를 넣었다. 지금은 **들어간다**. FK는 그 등급이 있는지만 본다. 막는 방법은 따로 정한다.
+- **`seat_id` · `grade_id`에는 인덱스가 없다**: 좌석이나 등급을 지우면 FK 검사가 `schedule_seats` 전체를 읽는다(Q16). 회차 × 좌석이라 이 테이블이 가장 크다. 필요한지는 따로 정한다.
+
+**정리**
+
+- 합의: `schedule_seats(id, schedule_id, seat_id, grade_id, status)`, `UNIQUE (schedule_id, seat_id)`
+- 반영: `status`를 뺀 나머지를 schema.sql에, 2,000행을 seed.sql에. 제약조건 검증 4개(같은 회차의 같은 좌석 · 없는 회차 · 등급 NULL · 다른 공연의 등급)
+- 결정 대기: `status`의 값 목록과 지키는 방법 ← Q34
+
+## SQL 반영 (Q4~Q33)
+
+`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
 ## 눈으로 확인하기
 
@@ -798,6 +820,9 @@ PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 
 | Q28 · Q29 | 팔레트에 없는 키(`purple`) · HEX(`#E74C3C`) · NULL | 거부 `23514` · `23514` · `23502` |
 | Q30 | 같은 공연에 같은 순서 · 순서 0 · NULL | 거부 `23505` · `23514` · `23502` |
 | Q31 | VIP(10)와 R(20) 사이에 SR(15) | 들어감 (다른 행은 그대로) |
+| Q33 | 같은 회차에 같은 좌석 · 등급 NULL | 거부 `23505` · `23502` |
+| Q32 | 없는 회차의 좌석 | 거부 `23503` foreign_key_violation |
+| Q25 | 회차 좌석에 다른 공연의 등급 | **들어감** (아직 못 막는 구멍) |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 
@@ -836,3 +861,5 @@ PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 
 - "오픈 일정 추후 공지"인 회차를 먼저 등록해야 한다면 `booking_opens_at`의 NOT NULL을 어떻게 할까? (Q24)
 - 회차 좌석이 다른 공연의 등급을 가리키지 못하게 DB가 막을 수 있을까? (Q25, `schedule_seats` 설계 때)
 - `VIP`와 `vip`, `VIP `(끝 공백)를 같은 이름으로 보고 막을까? 막는다면 애플리케이션과 DB 중 어디서? (Q27)
+- `schedule_seats.seat_id` · `grade_id`에 FK 인덱스가 필요할까? 좌석 · 등급을 지울 일이 얼마나 있나? (Q33)
+- 회차를 만들 때 좌석마다 등급을 어디서 가져와 채울까? (Q8, Q33)

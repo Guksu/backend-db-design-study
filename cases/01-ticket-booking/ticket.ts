@@ -354,6 +354,49 @@ INSERT INTO grades (concert_id, name, color, sort_order) SELECT id, 'VIP', 'red'
     code: '23503',
   },
   {
+    id: 'schedule-seat-duplicate',
+    decision: 'Q33',
+    rule: 'UNIQUE (schedule_id, seat_id)',
+    label: '12/24 회차에 이미 있는 좌석을 한 번 더 넣는다',
+    sql: `INSERT INTO schedule_seats (schedule_id, seat_id, grade_id)
+SELECT schedule_id, seat_id, grade_id FROM schedule_seats ORDER BY id LIMIT 1`,
+    expect: 'rejected',
+    code: '23505',
+  },
+  {
+    id: 'schedule-seat-unknown-schedule',
+    decision: 'Q32',
+    rule: 'schedule_id → schedules(id) FK',
+    label: '없는 회차(id 999999)의 좌석을 넣는다',
+    sql: `INSERT INTO schedule_seats (schedule_id, seat_id, grade_id)
+SELECT 999999, seat_id, grade_id FROM schedule_seats ORDER BY id LIMIT 1`,
+    expect: 'rejected',
+    code: '23503',
+  },
+  {
+    id: 'schedule-seat-null-grade',
+    decision: 'Q33',
+    rule: 'grade_id NOT NULL',
+    label: '등급 없이(NULL) 회차 좌석을 넣는다',
+    sql: `WITH s AS (INSERT INTO seats (venue_id, section, row_no, seat_no) VALUES (${STUDY_ARENA}, 'Z', 1, 1) RETURNING id)
+INSERT INTO schedule_seats (schedule_id, seat_id, grade_id)
+SELECT (SELECT min(id) FROM schedules), s.id, NULL FROM s`,
+    expect: 'rejected',
+    code: '23502',
+  },
+  {
+    id: 'schedule-seat-other-concert-grade',
+    decision: 'Q25',
+    rule: '다른 공연의 등급 (아직 못 막는 구멍)',
+    label: '스터디 콘서트 회차의 좌석에 다른 공연의 등급을 붙인다',
+    sql: `WITH c AS (INSERT INTO concerts (venue_id, title) VALUES (${STUDY_ARENA}, '다른 공연') RETURNING id),
+     g AS (INSERT INTO grades (concert_id, name, color, sort_order) SELECT id, 'VIP', 'red', 10 FROM c RETURNING id),
+     s AS (INSERT INTO seats (venue_id, section, row_no, seat_no) VALUES (${STUDY_ARENA}, 'Z', 1, 1) RETURNING id)
+INSERT INTO schedule_seats (schedule_id, seat_id, grade_id)
+SELECT (SELECT min(id) FROM schedules), s.id, g.id FROM s, g`,
+    expect: 'accepted',
+  },
+  {
     id: 'concert-duplicate-title',
     decision: 'Q15',
     rule: 'title에 UNIQUE 없음 (의도)',
