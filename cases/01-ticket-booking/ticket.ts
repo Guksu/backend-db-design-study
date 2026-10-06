@@ -60,6 +60,8 @@ export interface ConstraintCheck {
   label: string;
   sql: string;
   expect: 'rejected' | 'accepted';
+  /** 거부될 때 기대하는 SQLSTATE. 다른 규칙 때문에 거부되면 기대와 다르다고 본다 */
+  code?: string;
 }
 
 const STUDY_ARENA = `(SELECT id FROM venues WHERE name = '스터디 아레나' LIMIT 1)`;
@@ -73,6 +75,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '이미 있는 좌석(A구역 1열 1번)을 한 번 더 넣는다',
     sql: `INSERT INTO seats (venue_id, section, row_no, seat_no) VALUES (${STUDY_ARENA}, 'A', 1, 1)`,
     expect: 'rejected',
+    code: '23505',
   },
   {
     id: 'null-row',
@@ -81,6 +84,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '열 번호 없이(NULL) 좌석을 넣는다',
     sql: `INSERT INTO seats (venue_id, section, row_no, seat_no) VALUES (${STUDY_ARENA}, 'E', NULL, 1)`,
     expect: 'rejected',
+    code: '23502',
   },
   {
     id: 'unknown-venue',
@@ -89,6 +93,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '없는 공연장(id 999999)의 좌석을 넣는다',
     sql: `INSERT INTO seats (venue_id, section, row_no, seat_no) VALUES (999999, 'A', 1, 1)`,
     expect: 'rejected',
+    code: '23503',
   },
   {
     id: 'manual-id',
@@ -97,6 +102,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: 'id를 직접 지정해서 좌석을 넣는다',
     sql: `INSERT INTO seats (id, venue_id, section, row_no, seat_no) VALUES (1, ${STUDY_ARENA}, 'E', 1, 1)`,
     expect: 'rejected',
+    code: '428C9',
   },
   {
     id: 'empty-section',
@@ -105,6 +111,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '구역 이름을 빈 문자열로 넣는다',
     sql: `INSERT INTO seats (venue_id, section, row_no, seat_no) VALUES (${STUDY_ARENA}, '', 1, 1)`,
     expect: 'rejected',
+    code: '23514',
   },
   {
     id: 'long-section',
@@ -113,6 +120,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '구역 이름을 11글자로 넣는다',
     sql: `INSERT INTO seats (venue_id, section, row_no, seat_no) VALUES (${STUDY_ARENA}, '가나다라마바사아자차카', 1, 1)`,
     expect: 'rejected',
+    code: '22001',
   },
   {
     id: 'empty-venue-name',
@@ -121,6 +129,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '공연장 이름을 빈 문자열로 넣는다',
     sql: `INSERT INTO venues (name) VALUES ('')`,
     expect: 'rejected',
+    code: '23514',
   },
   {
     id: 'duplicate-venue-name',
@@ -137,6 +146,7 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '없는 공연장(id 999999)에서 열리는 공연을 넣는다',
     sql: `INSERT INTO concerts (venue_id, title) VALUES (999999, '없는 곳 공연')`,
     expect: 'rejected',
+    code: '23503',
   },
   {
     id: 'concert-empty-title',
@@ -145,46 +155,87 @@ export const CONSTRAINT_CHECKS: ConstraintCheck[] = [
     label: '공연 제목을 빈 문자열로 넣는다',
     sql: `INSERT INTO concerts (venue_id, title) VALUES (${STUDY_ARENA}, '')`,
     expect: 'rejected',
+    code: '23514',
   },
   {
     id: 'schedule-unknown-concert',
     decision: 'Q18',
     rule: 'schedules.concert_id → concerts(id) FK',
     label: '없는 공연(id 999999)의 회차를 넣는다',
-    sql: `INSERT INTO schedules (concert_id, starts_at) VALUES (999999, '2026-12-31 19:00+09')`,
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (999999, '2026-12-31 19:00+09', '2026-10-01 20:00+09')`,
     expect: 'rejected',
+    code: '23503',
   },
   {
     id: 'schedule-null-start',
     decision: 'Q18',
     rule: 'starts_at NOT NULL',
     label: '시작 시각 없이 회차를 넣는다',
-    sql: `INSERT INTO schedules (concert_id, starts_at) VALUES ((SELECT id FROM concerts LIMIT 1), NULL)`,
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (${STUDY_CONCERT}, NULL, '2026-10-01 20:00+09')`,
     expect: 'rejected',
+    code: '23502',
   },
   {
     id: 'schedule-duplicate',
     decision: 'Q21',
     rule: 'UNIQUE (concert_id, starts_at)',
     label: '이미 있는 회차(12/24 19:00)를 한 번 더 넣는다',
-    sql: `INSERT INTO schedules (concert_id, starts_at) VALUES (${STUDY_CONCERT}, '2026-12-24 19:00+09')`,
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (${STUDY_CONCERT}, '2026-12-24 19:00+09', '2026-10-01 20:00+09')`,
     expect: 'rejected',
+    code: '23505',
   },
   {
     id: 'schedule-duplicate-utc',
     decision: 'Q19 · Q21',
     rule: 'timestamptz라 같은 순간이면 같은 값',
     label: '같은 순간을 UTC로 적어(10:00Z) 한 번 더 넣는다',
-    sql: `INSERT INTO schedules (concert_id, starts_at) VALUES (${STUDY_CONCERT}, '2026-12-24T10:00:00Z')`,
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (${STUDY_CONCERT}, '2026-12-24T10:00:00Z', '2026-10-01 20:00+09')`,
     expect: 'rejected',
+    code: '23505',
   },
   {
     id: 'schedule-same-day',
     decision: 'Q21',
     rule: '시각이 다르면 다른 회차 (의도)',
     label: '같은 날 낮 공연(12/24 14:00)을 넣는다',
-    sql: `INSERT INTO schedules (concert_id, starts_at) VALUES (${STUDY_CONCERT}, '2026-12-24 14:00+09')`,
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (${STUDY_CONCERT}, '2026-12-24 14:00+09', '2026-10-01 20:00+09')`,
     expect: 'accepted',
+  },
+  {
+    id: 'schedule-null-opens',
+    decision: 'Q24',
+    rule: 'booking_opens_at NOT NULL',
+    label: '예매 오픈 시각 없이 회차를 넣는다',
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (${STUDY_CONCERT}, '2026-12-31 19:00+09', NULL)`,
+    expect: 'rejected',
+    code: '23502',
+  },
+  {
+    id: 'schedule-opens-after-start',
+    decision: 'Q24',
+    rule: 'CHECK (booking_opens_at < starts_at)',
+    label: '공연이 시작한 뒤에 예매를 연다',
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (${STUDY_CONCERT}, '2026-12-31 19:00+09', '2026-12-31 20:00+09')`,
+    expect: 'rejected',
+    code: '23514',
+  },
+  {
+    id: 'schedule-opens-at-start',
+    decision: 'Q24',
+    rule: 'CHECK (booking_opens_at < starts_at)',
+    label: '공연 시작과 같은 시각에 예매를 연다',
+    sql: `INSERT INTO schedules (concert_id, starts_at, booking_opens_at) VALUES (${STUDY_CONCERT}, '2026-12-31 19:00+09', '2026-12-31 19:00+09')`,
+    expect: 'rejected',
+    code: '23514',
+  },
+  {
+    id: 'schedule-move-start-before-open',
+    decision: 'Q24',
+    rule: 'CHECK는 UPDATE에도 적용',
+    label: '12/24 회차의 시작을 예매 오픈(10/1)보다 앞으로 옮긴다',
+    sql: `UPDATE schedules SET starts_at = '2026-09-30 19:00+09' WHERE concert_id = ${STUDY_CONCERT} AND starts_at = '2026-12-24 19:00+09'`,
+    expect: 'rejected',
+    code: '23514',
   },
   {
     id: 'concert-duplicate-title',

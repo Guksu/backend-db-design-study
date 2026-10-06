@@ -530,9 +530,28 @@ CREATE TABLE concerts (
 - 합의: 예매 오픈 시각은 `schedules`에 둔다
 - 결정 대기: 컬럼 이름 · 타입 · NULL 허용 · 제약조건 ← Q24
 
-## SQL 반영 (Q4~Q22)
+#### Q24. `schedules`에 예매 오픈 시각 컬럼을 추가한다면 이름 · 타입 · NULL · 제약조건은?
 
-`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
+**내 답**: `booking_opens_at`, `timestamptz`, NOT NULL, `starts_at`보다 이전이어야 한다.
+
+**피드백**: 네 가지 모두 맞다.
+
+- **이름**: `starts_at`과 같은 `_at` 꼴이라 "언제"를 담는 컬럼끼리 한눈에 묶인다. `opens`도 `starts`와 시제가 맞는다.
+- **timestamptz**: 실제로 일어나는 한 순간이다(Q19). "지금 예매가 열렸나"는 `now() >= booking_opens_at`처럼 현재 순간과 비교하는데, 같은 순간끼리 비교된다.
+- **NOT NULL**: 오픈 시각이 없는 회차는 팔 수 없다. 다만 회차를 등록하는 순간에 오픈 시각도 정해져 있어야 한다는 뜻이다. "오픈 일정 추후 공지"인 회차를 먼저 등록해야 하는 운영이 생기면 다시 고민한다(나중에 다룰 질문).
+- **CHECK (booking_opens_at < starts_at)**: 두 컬럼을 비교하는 CHECK다. `<`라서 공연 시작과 같은 시각에 여는 것도 막는다. UPDATE에도 똑같이 적용돼서, 공연 시작을 오픈보다 앞으로 옮기는 수정도 거부된다(Q21의 "모든 쓰기 경로"와 같은 이야기).
+- **CHECK에 넣지 않는 것**: "오픈은 지금보다 미래여야 한다"처럼 `now()`에 기대는 규칙은 CHECK에 넣지 않는다. CHECK는 행을 쓸 때만 검사하는데, PostgreSQL은 그 결과가 언제 검사해도 같다고 가정한다. 시간이 흐르면 참 · 거짓이 바뀌는 조건은 덤프를 복원할 때 실패할 수 있다. 이런 규칙은 애플리케이션에서 검증한다. "최소 하루 전에 연다" 같은 운영 정책도 마찬가지다.
+
+**검증하다 알게 된 것**: NOT NULL 컬럼을 추가하자, 기존 회차 검증 중 "없는 공연의 회차" INSERT가 FK(`23503`)가 아니라 오픈 시각 NOT NULL(`23502`)로 거부됐다. 결과만 보면 "거부, 기대대로"라서 엉뚱한 이유로 통과하고 있었다. 그래서 검증마다 **기대하는 SQLSTATE**를 적어 두고, 결과와 코드가 모두 맞아야 "기대대로"로 판정하게 바꿨다.
+
+**정리**
+
+- 합의: `booking_opens_at TIMESTAMPTZ NOT NULL`, `CONSTRAINT schedules_opens_before_start_check CHECK (booking_opens_at < starts_at)`
+- 반영: schema.sql, 시드(12/24는 10/1 20:00 1차 오픈, 12/25는 10/8 20:00에 여는 추가 회차), 제약조건 검증 4개(NULL · 시작 뒤 · 시작과 같은 시각 · 시작을 오픈 앞으로 옮기는 UPDATE)
+
+## SQL 반영 (Q4~Q24)
+
+`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
 ## 눈으로 확인하기
 
@@ -565,6 +584,12 @@ CREATE TABLE concerts (
 | Q21 | 같은 공연 · 같은 시각 회차를 한 번 더 | 거부 `23505` unique_violation |
 | Q19 · Q21 | 같은 순간을 UTC(`10:00Z`)로 적어 한 번 더 | 거부 `23505` (timestamptz라 같은 값) |
 | Q21 | 같은 날 다른 시각(14:00) 회차 | 들어감 (다른 회차) |
+| Q24 | 예매 오픈 시각 NULL | 거부 `23502` not_null_violation |
+| Q24 | 공연 시작 뒤에 예매 오픈 | 거부 `23514` check_violation |
+| Q24 | 공연 시작과 같은 시각에 예매 오픈 | 거부 `23514` check_violation |
+| Q24 | 공연 시작을 예매 오픈보다 앞으로 옮기는 UPDATE | 거부 `23514` check_violation |
+
+판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 
 **동시 INSERT 시뮬레이션**
 
@@ -598,3 +623,4 @@ CREATE TABLE concerts (
 - 해외 공연장이 생기면 공연장의 시간대(예: `Asia/Seoul`)를 저장해야 할까? (Q19)
 - 같은 공연의 19:00과 19:30처럼 시간이 겹치는 회차도 막아야 할까? 막는다면 어떻게? (Q21)
 - 하루 단위 전체 회차 조회가 잦아지면 `starts_at` 인덱스를 따로 둘까? (Q22)
+- "오픈 일정 추후 공지"인 회차를 먼저 등록해야 한다면 `booking_opens_at`의 NOT NULL을 어떻게 할까? (Q24)

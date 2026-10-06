@@ -40,6 +40,8 @@ describe('Step 1. venues · seats', () => {
   it.each(CONSTRAINT_CHECKS)('$decision: $label → $expect', async (check) => {
     const result = await runConstraintCheck(pool, check);
     expect(result.outcome).toBe(check.expect);
+    // 다른 규칙 때문에 거부된 것이 아닌지까지 확인한다
+    if (check.code) expect(result.code).toBe(check.code);
   });
 });
 
@@ -158,6 +160,20 @@ describe('Q22. 복합 인덱스 순서', () => {
     expect(plan(plus.byConcert)).not.toMatch(/Seq Scan/);
     expect(timeFirst.fkCheckMs).toBeGreaterThan(concertFirst.fkCheckMs * 3);
     expect(plus.indexes.map((i) => i.kind)).toEqual(['pk', 'unique', 'concert']);
+  });
+});
+
+describe('Q23 · Q24. 예매 오픈 시각', () => {
+  it('회차마다 예매 오픈 시각이 있고, 모두 공연 시작보다 앞선다', async () => {
+    const { rows } = await pool.query(`
+      SELECT to_char(starts_at AT TIME ZONE 'Asia/Seoul', 'MM-DD HH24:MI') AS starts,
+             to_char(booking_opens_at AT TIME ZONE 'Asia/Seoul', 'MM-DD HH24:MI') AS opens
+      FROM schedules ORDER BY starts_at
+    `);
+    expect(rows).toEqual([
+      { starts: '12-24 19:00', opens: '10-01 20:00' },
+      { starts: '12-25 18:00', opens: '10-08 20:00' },
+    ]);
   });
 });
 

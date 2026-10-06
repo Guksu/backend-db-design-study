@@ -34,7 +34,9 @@ CREATE TABLE schedules (
   id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   concert_id BIGINT      NOT NULL REFERENCES concerts (id),
   starts_at  TIMESTAMPTZ NOT NULL,
-  CONSTRAINT schedules_concert_starts_uq UNIQUE (concert_id, starts_at)
+  booking_opens_at TIMESTAMPTZ NOT NULL,
+  CONSTRAINT schedules_concert_starts_uq UNIQUE (concert_id, starts_at),
+  CONSTRAINT schedules_opens_before_start_check CHECK (booking_opens_at < starts_at)
 );
 
 -- 설계 결정을 DB에도 남긴다. 시각화 화면의 ERD가 이 주석을 읽는다
@@ -64,3 +66,5 @@ COMMENT ON COLUMN schedules.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)'
 COMMENT ON COLUMN schedules.concert_id IS '어느 공연의 회차인가 (Q18)';
 COMMENT ON COLUMN schedules.starts_at IS '실제로 일어나는 한 순간이라 timestamptz. 화면 표시 시간대는 따로 정한다 (Q19)';
 COMMENT ON CONSTRAINT schedules_concert_starts_uq ON schedules IS '같은 공연 · 같은 시각 회차 중복 방지 (Q20, Q21). concert_id가 앞이라 공연별 회차 조회와 FK 검사도 이 인덱스로 한다. 별도 FK 인덱스 없음 (Q22)';
+COMMENT ON COLUMN schedules.booking_opens_at IS '예매 오픈 시각. 1차 오픈 · 추가 회차처럼 회차마다 다를 수 있어 회차에 둔다 (Q23, Q24)';
+COMMENT ON CONSTRAINT schedules_opens_before_start_check ON schedules IS '예매는 공연 시작 전에 열려야 한다. 같은 시각도 안 된다 (Q24)';

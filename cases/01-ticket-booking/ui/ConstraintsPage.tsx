@@ -6,6 +6,10 @@ import { Icon } from '@web/ui/Icon';
 import type { ConstraintCheck, ConstraintCheckResult } from '../ticket';
 import { crumbs, RequireSchema, useCase } from './TicketCase';
 
+/** 결과뿐 아니라 거부한 이유(SQLSTATE)까지 기대와 같아야 맞다고 본다. 다른 규칙에 걸려 거부된 경우를 걸러 낸다 */
+const matches = (check: ConstraintCheck, result: ConstraintCheckResult | undefined) =>
+  Boolean(result && result.outcome === check.expect && (!check.code || result.code === check.code));
+
 const SQLSTATES = [
   {
     code: '23505',
@@ -76,7 +80,7 @@ export function ConstraintsPage() {
       setResults(map);
       setExpanded(new Set());
       writeLastRun('constraints', {
-        passed: checks.filter((c) => map.get(c.id)?.outcome === c.expect).length,
+        passed: checks.filter((c) => matches(c, map.get(c.id))).length,
         total: checks.length,
       });
     } catch (err) {
@@ -112,7 +116,7 @@ export function ConstraintsPage() {
           <Explainer
             question="애플리케이션을 거치지 않아도 규칙이 지켜질까?"
             method="규칙마다 어기는 INSERT를 한 번씩 → 바로 ROLLBACK"
-            reading="판정 = 기대와 같은지 · 코드 = SQLSTATE"
+            reading="판정 = 결과와 코드(SQLSTATE)가 기대와 같은지"
             result={results && <ResultHeadline checks={checks} results={results} />}
             more={
               <>
@@ -179,7 +183,10 @@ export function ConstraintsPage() {
                               {check.label}
                             </button>
                           </td>
-                          <td className="nowrap">{OUTCOME[check.expect]}</td>
+                          <td className="nowrap">
+                            {OUTCOME[check.expect]}
+                            {check.code && <code className="sqlstate">{check.code}</code>}
+                          </td>
                           <td className="nowrap">
                             {result ? (
                               <>
@@ -192,7 +199,7 @@ export function ConstraintsPage() {
                           </td>
                           <td className="nowrap">
                             {result ? (
-                              result.outcome === check.expect ? (
+                              matches(check, result) ? (
                                 <StatusIndicator type="success">기대대로</StatusIndicator>
                               ) : (
                                 <StatusIndicator type="error">기대와 다름</StatusIndicator>
@@ -277,7 +284,7 @@ function ResultHeadline({
   checks: ConstraintCheck[];
   results: Map<string, ConstraintCheckResult>;
 }) {
-  const matched = checks.filter((c) => results.get(c.id)?.outcome === c.expect).length;
+  const matched = checks.filter((c) => matches(c, results.get(c.id))).length;
   const rejected = checks.filter((c) => results.get(c.id)?.outcome === 'rejected').length;
   return (
     <StatusIndicator type={matched === checks.length ? 'success' : 'error'}>
@@ -293,11 +300,11 @@ function Interpretation({
   checks: ConstraintCheck[];
   results: Map<string, ConstraintCheckResult>;
 }) {
-  const matched = checks.filter((c) => results.get(c.id)?.outcome === c.expect);
+  const matched = checks.filter((c) => matches(c, results.get(c.id)));
   const rejected = checks.filter((c) => results.get(c.id)?.outcome === 'rejected');
   const accepted = checks.filter((c) => results.get(c.id)?.outcome === 'accepted');
   const codes = [...new Set(rejected.map((c) => results.get(c.id)?.code).filter(Boolean))];
-  const mismatched = checks.filter((c) => results.get(c.id)?.outcome !== c.expect);
+  const mismatched = checks.filter((c) => !matches(c, results.get(c.id)));
 
   return (
     <>

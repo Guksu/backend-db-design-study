@@ -137,10 +137,10 @@ export const DECISIONS: Decision[] = [
     verify: { page: 'index-order', label: '복합 인덱스 순서' },
   },
   {
-    q: 'Q23',
+    q: 'Q23 · Q24',
     topic: '예매 오픈 시각',
-    decision: '회차(schedules)에 둔다. 컬럼 정의는 다음 문답에서',
-    why: '한 공연 안에서도 1차 오픈 · 추가 회차처럼 회차마다 오픈 시각이 다를 수 있다',
-    open: true,
+    decision: 'schedules.booking_opens_at TIMESTAMPTZ NOT NULL, CHECK (booking_opens_at < starts_at)',
+    why: '한 공연 안에서도 1차 오픈 · 추가 회차처럼 회차마다 오픈 시각이 다르고, 예매는 공연 전에 열려야 한다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
   },
 ];
