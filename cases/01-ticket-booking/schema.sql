@@ -34,7 +34,20 @@ CREATE TABLE schedules (
   id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   concert_id BIGINT      NOT NULL REFERENCES concerts (id),
   starts_at  TIMESTAMPTZ NOT NULL,
-  CONSTRAINT schedules_concert_starts_uq UNIQUE (concert_id, starts_at)
+  booking_opens_at TIMESTAMPTZ NOT NULL,
+  CONSTRAINT schedules_concert_starts_uq UNIQUE (concert_id, starts_at),
+  CONSTRAINT schedules_opens_before_start_check CHECK (booking_opens_at < starts_at)
+);
+
+CREATE TABLE grades (
+  id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  concert_id BIGINT      NOT NULL REFERENCES concerts (id),
+  name       VARCHAR(20) NOT NULL CHECK (name <> ''),
+  -- 키 목록은 gradePalette.ts(디자인 시스템)와 같아야 한다. 색을 더할 때 같은 배포에서 함께 고친다
+  color      VARCHAR(20) NOT NULL CHECK (color IN ('red', 'orange', 'gold', 'green', 'teal', 'blue', 'pink', 'gray')),
+  sort_order INTEGER     NOT NULL CHECK (sort_order > 0),
+  CONSTRAINT grades_concert_name_uq UNIQUE (concert_id, name),
+  CONSTRAINT grades_concert_sort_uq UNIQUE (concert_id, sort_order)
 );
 
 -- 설계 결정을 DB에도 남긴다. 시각화 화면의 ERD가 이 주석을 읽는다
@@ -64,3 +77,17 @@ COMMENT ON COLUMN schedules.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)'
 COMMENT ON COLUMN schedules.concert_id IS '어느 공연의 회차인가 (Q18)';
 COMMENT ON COLUMN schedules.starts_at IS '실제로 일어나는 한 순간이라 timestamptz. 화면 표시 시간대는 따로 정한다 (Q19)';
 COMMENT ON CONSTRAINT schedules_concert_starts_uq ON schedules IS '같은 공연 · 같은 시각 회차 중복 방지 (Q20, Q21). concert_id가 앞이라 공연별 회차 조회와 FK 검사도 이 인덱스로 한다. 별도 FK 인덱스 없음 (Q22)';
+COMMENT ON COLUMN schedules.booking_opens_at IS '예매 오픈 시각. 1차 오픈 · 추가 회차처럼 회차마다 다를 수 있어 회차에 둔다 (Q23, Q24)';
+COMMENT ON CONSTRAINT schedules_opens_before_start_check ON schedules IS '예매는 공연 시작 전에 열려야 한다. 같은 시각도 안 된다 (Q24)';
+
+COMMENT ON TABLE grades IS '공연별 등급. 공연마다 등급 구성과 이름이 다르다 (Q25, Q26)';
+COMMENT ON COLUMN grades.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
+COMMENT ON COLUMN grades.concert_id IS '어느 공연의 등급인가 (Q25)';
+COMMENT ON COLUMN grades.name IS '화면에 보이는 등급 이름. 20글자 제한 (Q27)';
+COMMENT ON CONSTRAINT grades_name_check ON grades IS '빈 문자열 금지 (Q27)';
+COMMENT ON COLUMN grades.color IS '디자인 시스템의 팔레트 키. 실제 색은 화면이 정한다 (Q28)';
+COMMENT ON CONSTRAINT grades_color_check ON grades IS '팔레트 키만 허용. 색 추가는 디자인 시스템 배포와 함께 가므로 CHECK (Q29)';
+COMMENT ON COLUMN grades.sort_order IS '범례 · 가격표에 보일 순서. 1부터 (Q30)';
+COMMENT ON CONSTRAINT grades_sort_order_check ON grades IS '0 이하 금지 (Q30)';
+COMMENT ON CONSTRAINT grades_concert_sort_uq ON grades IS '한 공연 안에서 순서가 겹치면 범례 순서가 정해지지 않는다 (Q30)';
+COMMENT ON CONSTRAINT grades_concert_name_uq ON grades IS '한 공연에 같은 이름의 등급 금지 (Q27). concert_id가 앞이라 FK 인덱스도 겸한다 (Q22와 같은 이유)';

@@ -136,4 +136,18 @@ export const DECISIONS: Decision[] = [
     why: '공연을 먼저 정하고 시각을 찾는다. 앞 컬럼이 concert_id라 공연별 조회와 FK 검사를 이 인덱스가 맡는다',
     verify: { page: 'index-order', label: '복합 인덱스 순서' },
   },
+  {
+    q: 'Q23 · Q24',
+    topic: '예매 오픈 시각',
+    decision: 'schedules.booking_opens_at TIMESTAMPTZ NOT NULL, CHECK (booking_opens_at < starts_at)',
+    why: '한 공연 안에서도 1차 오픈 · 추가 회차처럼 회차마다 오픈 시각이 다르고, 예매는 공연 전에 열려야 한다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
+  },
+  {
+    q: 'Q25 – Q31',
+    topic: 'grades',
+    decision: '공연마다 정한다 (concerts 1 : N grades). name VARCHAR(20) · color 팔레트 키 CHECK · sort_order > 0(10 간격), 공연 안에서 name과 sort_order는 각각 UNIQUE',
+    why: '공연마다 등급 구성과 이름이 다르다. 색은 디자인 시스템과 함께 배포로 바뀐다. 끼워 넣기는 INSERT 한 번으로 끝나야 한다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
+  },
 ];

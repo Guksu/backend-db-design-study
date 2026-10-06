@@ -14,8 +14,17 @@ INSERT INTO concerts (venue_id, title)
 SELECT id, '스터디 콘서트' FROM venues WHERE name = '스터디 아레나';
 
 -- 회차 2개 (Q18, Q19): 서울 시각으로 입력하고 timestamptz로 저장한다
-INSERT INTO schedules (concert_id, starts_at)
-SELECT c.id, starts_at
+-- 예매 오픈 (Q23, Q24): 12/24는 1차 오픈, 12/25는 일주일 뒤 여는 추가 회차
+INSERT INTO schedules (concert_id, starts_at, booking_opens_at)
+SELECT c.id, s.starts_at, s.booking_opens_at
 FROM concerts c,
-     unnest(ARRAY['2026-12-24 19:00+09', '2026-12-25 18:00+09']::timestamptz[]) AS starts_at
+     (VALUES ('2026-12-24 19:00+09'::timestamptz, '2026-10-01 20:00+09'::timestamptz),
+             ('2026-12-25 18:00+09'::timestamptz, '2026-10-08 20:00+09'::timestamptz)) AS s (starts_at, booking_opens_at)
+WHERE c.title = '스터디 콘서트';
+
+-- 등급 3개 (Q25–Q31): 스터디 콘서트의 등급 목록, 팔레트 키, 범례 순서(10 간격이라 사이에 끼워 넣기 쉽다)
+INSERT INTO grades (concert_id, name, color, sort_order)
+SELECT c.id, g.name, g.color, g.sort_order
+FROM concerts c,
+     (VALUES ('VIP', 'red', 10), ('R', 'green', 20), ('S', 'blue', 30)) AS g (name, color, sort_order)
 WHERE c.title = '스터디 콘서트';
