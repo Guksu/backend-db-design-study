@@ -116,7 +116,7 @@ export function Overview() {
                 value: `${PLANNED_TABLES.filter((t) => !built.includes(t)).length}개`,
                 hint: PLANNED_TABLES.filter((t) => !built.includes(t)).join(', '),
               },
-              { label: '문답', value: 'Q1 – Q24' },
+              { label: '문답', value: 'Q1 – Q25' },
               { label: '실험', value: `${EXPERIMENTS.length}개`, hint: '실제 PostgreSQL에서 실행' },
             ]}
           />

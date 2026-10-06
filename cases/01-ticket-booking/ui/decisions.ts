@@ -143,4 +143,11 @@ export const DECISIONS: Decision[] = [
     why: '한 공연 안에서도 1차 오픈 · 추가 회차처럼 회차마다 오픈 시각이 다르고, 예매는 공연 전에 열려야 한다',
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
+  {
+    q: 'Q25',
+    topic: '등급 목록의 주인',
+    decision: '등급은 공연마다 정한다 (concerts 1 : N grades). 컬럼은 다음 문답에서',
+    why: '공연마다 등급 구성과 이름이 다르다. 함께 쓰면 한 공연의 수정이 다른 공연 좌석맵을 바꾼다',
+    open: true,
+  },
 ];

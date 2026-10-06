@@ -43,13 +43,14 @@
 
 ## 현재 구조
 
-문답이 진행되면서 갱신한다. (Q23까지 반영) 시각화 화면의 ERD는 이 블록의 관계와 실제 DB 카탈로그를 합쳐서 그린다.
+문답이 진행되면서 갱신한다. (Q25까지 반영) 시각화 화면의 ERD는 이 블록의 관계와 실제 DB 카탈로그를 합쳐서 그린다.
 
 ```mermaid
 erDiagram
   venues ||--o{ seats : "좌석 배치"
   venues ||--o{ concerts : "공연장"
   concerts ||--o{ schedules : "회차"
+  concerts ||--o{ grades : "등급 목록"
   schedules ||--o{ schedule_seats : "회차별 좌석"
   seats ||--o{ schedule_seats : "어떤 좌석"
   grades ||--o{ schedule_seats : "등급"
@@ -61,7 +62,7 @@ erDiagram
 |---|---|---|
 | `venues`, `seats` | 정적 | 공연장과 좌석 배치 |
 | `concerts`, `schedules` | 정적 | 공연과 회차, 회차별 예매 오픈 시각 (Q23) |
-| `grades` | 참조 | 등급과 등급별 표시 정보 (어드민이 관리) |
+| `grades` | 참조 | 공연별 등급과 등급별 표시 정보 (어드민이 관리, Q25) |
 | `schedule_seats` | 동적 | 회차별 좌석의 등급과 상태 |
 | `reservations` | 이력 | 누가 · 언제 · 어떤 좌석을 |
 
@@ -549,6 +550,25 @@ CREATE TABLE concerts (
 - 합의: `booking_opens_at TIMESTAMPTZ NOT NULL`, `CONSTRAINT schedules_opens_before_start_check CHECK (booking_opens_at < starts_at)`
 - 반영: schema.sql, 시드(12/24는 10/1 20:00 1차 오픈, 12/25는 10/8 20:00에 여는 추가 회차), 제약조건 검증 4개(NULL · 시작 뒤 · 시작과 같은 시각 · 시작을 오픈 앞으로 옮기는 UPDATE)
 
+### grades (등급)
+
+#### Q25. 등급 목록은 모든 공연이 함께 쓸까, 공연마다 따로 정할까?
+
+**내 답**: 공연마다 따로 정하는 목록이다. 공연 하나에 목록 하나가 있고, JOIN해서 가져올 수 있다.
+
+**피드백**: 맞다. 공연마다 등급 구성(VIP · R · S, SR · R · 스탠딩)과 이름이 다르니, 등급은 공연이 정한다(함수 종속, Q7). 한 가지만 정확히 하자.
+
+- **"목록"은 따로 만드는 무엇이 아니라 같은 공연을 가리키는 행들의 묶음이다.** `grades` 한 행이 등급 하나이고, 행마다 어느 공연의 등급인지(`concert_id`)를 가진다. 공연 하나에 등급 여러 개, 즉 `concerts 1 : N grades`다. 목록을 담는 테이블(`grade_lists`)을 따로 둘 필요가 없다.
+- **가져오는 쿼리**: 공연 상세 화면에서는 `SELECT … FROM grades WHERE concert_id = ?`면 충분하다. 좌석맵처럼 회차별 좌석과 함께 볼 때 JOIN한다.
+- **모두가 함께 쓰는 목록이었다면**: `VIP`라는 행 하나를 모든 공연이 공유한다. 한 공연을 위해 이름이나 색을 바꾸면 다른 공연의 좌석맵까지 바뀐다. Q7에서 등급을 `seats`에서 뺀 이유와 같은 문제다.
+
+**새로 생긴 질문**: `schedule_seats`의 등급은 `grades`를 참조한다(Q8). 그런데 FK는 "그 등급이 존재하는지"만 확인한다. 공연 A의 회차 좌석이 공연 B의 등급을 가리켜도 FK는 통과한다. 이걸 DB가 막게 할 수 있을까? `schedule_seats`를 설계할 때 다룬다.
+
+**정리**
+
+- 합의: 등급은 공연마다 정한다. `grades` 한 행 = 한 공연의 등급 하나, `concerts 1 : N grades`
+- 결정 대기: `grades`의 컬럼 · 타입 · 제약조건 ← Q26
+
 ## SQL 반영 (Q4~Q24)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
@@ -624,3 +644,4 @@ CREATE TABLE concerts (
 - 같은 공연의 19:00과 19:30처럼 시간이 겹치는 회차도 막아야 할까? 막는다면 어떻게? (Q21)
 - 하루 단위 전체 회차 조회가 잦아지면 `starts_at` 인덱스를 따로 둘까? (Q22)
 - "오픈 일정 추후 공지"인 회차를 먼저 등록해야 한다면 `booking_opens_at`의 NOT NULL을 어떻게 할까? (Q24)
+- 회차 좌석이 다른 공연의 등급을 가리키지 못하게 DB가 막을 수 있을까? (Q25, `schedule_seats` 설계 때)
