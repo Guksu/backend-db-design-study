@@ -569,6 +569,28 @@ CREATE TABLE concerts (
 - 합의: 등급은 공연마다 정한다. `grades` 한 행 = 한 공연의 등급 하나, `concerts 1 : N grades`
 - 결정 대기: `grades`의 컬럼 · 타입 · 제약조건 ← Q26
 
+#### Q26. `grades`를 직접 설계한다면 어떤 컬럼이 필요할까?
+
+**내 답**: `id`, `concert_id`, `name`, `color`, `sort_order`.
+
+**피드백**: 컬럼 구성이 딱 맞다. 각 컬럼이 무엇을 위한 것인지 짚어 두자.
+
+| 컬럼 | 하는 일 | 근거 |
+|---|---|---|
+| `id` | 회차별 좌석이 등급을 가리킬 때 쓰는 대리 키 | Q8, Q10 |
+| `concert_id` | 어느 공연의 등급인가 | Q25 |
+| `name` | 화면에 보이는 이름 (VIP, R석, 스탠딩) | Q6 |
+| `color` | 좌석맵에서 이 등급을 칠할 색 | Q6 |
+| `sort_order` | 범례 · 가격표에 보일 순서 | 이름순 정렬로는 VIP → R → S를 만들 수 없다 |
+
+- **넣지 않은 것도 맞다.** 등급별 좌석 수는 `schedule_seats`를 세면 나온다. 저장하면 실제 좌석과 어긋날 수 있다(Q12와 같은 원칙).
+- **가격은 아직 정하지 않았다.** 등급마다 가격이 다르니 여기에 둘 수도 있지만, 회차(평일 · 주말)나 판매 시점(조기 예매)에 따라 달라질 수도 있다. 가격을 어디에 둘지는 따로 다룬다.
+
+**정리**
+
+- 합의: `grades(id, concert_id, name, color, sort_order)`
+- 결정 대기: 타입 · NULL · 제약조건 ← Q27
+
 ## SQL 반영 (Q4~Q24)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
