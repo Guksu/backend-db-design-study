@@ -157,4 +157,11 @@ export const DECISIONS: Decision[] = [
     why: '같은 좌석도 회차마다 따로 팔린다. 상태 목록은 코드와 함께 드물게 바뀌고 값이 빠질 일이 거의 없다',
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
+  {
+    q: 'Q35 · Q36',
+    topic: '공연 · 공연장 맞추기',
+    decision: 'schedule_seats에 concert_id · venue_id를 복사하고 복합 FK 넷으로 회차 · 등급 · 좌석이 같은 공연 · 공연장인지 강제한다',
+    why: 'FK 하나는 행이 있는지만 본다. 규칙을 테이블 정의에 두면 모든 쓰기 경로를 DB가 막는다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
+  },
 ];

@@ -186,7 +186,12 @@ describe('Q20 · Q21 · Q22. 결정 반영', () => {
       ]),
     );
     const preview = await previewTable(pool, SCHEMA, 'schedules');
-    expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['schedules_concert_starts_uq', 'schedules_pkey']);
+    // schedules_id_concert_uq(Q36)는 id가 앞이라 concert_id만으로 찾는 인덱스가 아니다
+    expect(preview?.indexes.map((i) => i.name).sort()).toEqual([
+      'schedules_concert_starts_uq',
+      'schedules_id_concert_uq',
+      'schedules_pkey',
+    ]);
   });
 });
 
@@ -213,6 +218,7 @@ describe('Q25 – Q30. grades', () => {
     expect(preview?.indexes.map((i) => i.name).sort()).toEqual([
       'grades_concert_name_uq',
       'grades_concert_sort_uq',
+      'grades_id_concert_uq',
       'grades_pkey',
     ]);
   });
@@ -371,5 +377,35 @@ describe('Q34. 좌석 상태 ENUM', () => {
       await client.query('ROLLBACK');
       client.release();
     }
+  });
+});
+
+describe('Q35 · Q36. 복합 FK', () => {
+  it('회차 좌석의 FK 넷이 concert_id · venue_id를 함께 써서 같은 공연 · 같은 공연장을 강제한다', async () => {
+    const table = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'schedule_seats');
+    const fks = table?.constraints
+      .filter((c) => c.kind === 'FOREIGN KEY')
+      .map((c) => `${c.columns.join(',')}>${c.refTable}(${c.refColumns.join(',')})`)
+      .sort();
+    expect(fks).toEqual([
+      'concert_id,venue_id>concerts(id,venue_id)',
+      'grade_id,concert_id>grades(id,concert_id)',
+      'schedule_id,concert_id>schedules(id,concert_id)',
+      'seat_id,venue_id>seats(id,venue_id)',
+    ]);
+  });
+
+  it('시드의 복사본은 원본과 모두 같다', async () => {
+    const { rows } = await pool.query(`
+      SELECT count(*)::int AS total,
+             count(*) FILTER (WHERE ss.concert_id = sc.concert_id AND g.concert_id = sc.concert_id
+                                AND ss.venue_id = c.venue_id AND se.venue_id = c.venue_id)::int AS consistent
+      FROM schedule_seats ss
+      JOIN schedules sc ON sc.id = ss.schedule_id
+      JOIN concerts c ON c.id = sc.concert_id
+      JOIN grades g ON g.id = ss.grade_id
+      JOIN seats se ON se.id = ss.seat_id
+    `);
+    expect(rows[0]).toEqual({ total: 2000, consistent: 2000 });
   });
 });

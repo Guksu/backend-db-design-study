@@ -843,7 +843,7 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 | 복사한 컬럼을 NULL로 | **들어감**. 복합 FK는 컬럼 하나라도 NULL이면 검사하지 않는다(기본 MATCH SIMPLE). 그래서 복사한 컬럼은 반드시 NOT NULL |
 
 - **반정규화지만 어긋나지 않는다.** Q8의 등급 스냅샷은 일부러 원본과 달라질 수 있게 둔 복사본이었다. 이번 복사본은 FK가 원본과 같은 값만 허용하므로 **어긋날 수 없다**. 공연의 공연장을 바꾸려 해도 FK가 막아서, 회차 좌석을 어떻게 할지 먼저 정하게 만든다.
-- **비용**: 가장 큰 테이블에 BIGINT 두 개(행마다 16바이트), 부모 네 테이블에 UNIQUE 인덱스 하나씩, INSERT마다 FK 검사가 3번에서 5번으로 는다(부모는 작은 테이블이라 인덱스 조회 몇 번이다).
+- **비용**: 가장 큰 테이블에 BIGINT 두 개(행마다 16바이트), 부모 네 테이블에 UNIQUE 인덱스 하나씩. 단일 FK를 그대로 두면 INSERT마다 FK 검사가 3번에서 7번으로 늘지만, 복합 FK가 단일 FK의 확인까지 하므로 단일 FK를 지우면 4번이다(부모는 작은 테이블이라 인덱스 조회 몇 번이다).
 
 **다른 방법**
 
@@ -860,7 +860,35 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 - 새로 찾은 구멍: 다른 공연장의 좌석
 - 결정 대기: 두 구멍을 무엇으로 막을지 ← Q36
 
-## SQL 반영 (Q4~Q34)
+#### Q36. 두 구멍을 무엇으로 막을까?
+
+**내 답**: (a) 복합 FK로 둘 다 막는다.
+
+**피드백**: 좋은 선택이다. 규칙이 테이블 정의에 그대로 보이고, 회차 좌석을 만드는 코드 · 어드민 · 직접 SQL 등 어떤 쓰기 경로든 DB가 막는다(Q21과 같은 이유).
+
+**반영하며 정한 것**
+
+- **단일 FK 셋을 복합 FK 넷으로 바꿨다.** `(schedule_id, concert_id) → schedules`가 통과하면 회차가 있다는 것도 확인된 것이라, `schedule_id → schedules(id)`를 따로 둘 필요가 없다. INSERT마다 FK 검사는 3번에서 4번이 된다.
+- **제약에 이름을 붙였다** (`schedule_seats_grade_fk`, `schedule_seats_seat_fk` 등). 거부될 때 어느 규칙인지 에러 메시지에 바로 보인다(Q9).
+- **복사본은 NOT NULL**: Q35에서 확인했듯 하나라도 NULL이면 복합 FK가 검사를 건너뛴다.
+
+**검증** (제약조건 검증)
+
+| 시도 | 결과 |
+|---|---|
+| 다른 공연의 등급 | 거부 `23503` (Q35까지는 들어갔다) |
+| 다른 공연장의 좌석 | 거부 `23503` (Q35까지는 들어갔다) |
+| 등급에 맞춰 `concert_id`를 거짓으로 적기 | 거부 `23503` 회차 FK에 걸린다 |
+| 회차 좌석이 있는 공연의 공연장 바꾸기 | 거부 `23503`. 회차 좌석을 어떻게 할지 먼저 정해야 한다 |
+
+자동 테스트는 FK 네 개의 컬럼 묶음과, 시드 2,000행의 복사본이 모두 원본과 같은지 확인한다.
+
+**정리**
+
+- 합의: 복합 FK로 다른 공연의 등급 · 다른 공연장의 좌석을 막는다
+- 반영: `schedule_seats`에 `concert_id` · `venue_id` (NOT NULL, 검증용 복사본), FK 네 개, 부모 네 테이블에 `UNIQUE (id, concert_id)` · `UNIQUE (id, venue_id)`. 제약조건 검증 2개 추가(거짓 concert_id · 공연장 바꾸기), 2개는 "들어감"에서 "거부"로
+
+## SQL 반영 (Q4~Q36)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`, `seat_status`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
@@ -910,8 +938,9 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 | Q33 | 같은 회차에 같은 좌석 · 등급 NULL | 거부 `23505` · `23502` |
 | Q32 | 없는 회차의 좌석 | 거부 `23503` foreign_key_violation |
 | Q34 | 좌석 상태를 화면 문구('예약완료') · NULL로 | 거부 `22P02` · `23502` |
-| Q25 | 회차 좌석에 다른 공연의 등급 | **들어감** (아직 못 막는 구멍) |
-| Q35 | 회차 좌석에 다른 공연장의 좌석 | **들어감** (아직 못 막는 구멍) |
+| Q25 · Q36 | 회차 좌석에 다른 공연의 등급 | 거부 `23503` (Q36 전까지는 들어갔다) |
+| Q35 · Q36 | 회차 좌석에 다른 공연장의 좌석 | 거부 `23503` (Q36 전까지는 들어갔다) |
+| Q36 | 등급에 맞춰 concert_id를 거짓으로 · 회차 좌석이 있는 공연의 공연장 바꾸기 | 거부 `23503` · `23503` |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 
@@ -948,7 +977,6 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 - 같은 공연의 19:00과 19:30처럼 시간이 겹치는 회차도 막아야 할까? 막는다면 어떻게? (Q21)
 - 하루 단위 전체 회차 조회가 잦아지면 `starts_at` 인덱스를 따로 둘까? (Q22)
 - "오픈 일정 추후 공지"인 회차를 먼저 등록해야 한다면 `booking_opens_at`의 NOT NULL을 어떻게 할까? (Q24)
-- 회차 좌석이 다른 공연의 등급을 가리키지 못하게 DB가 막을 수 있을까? (Q25, `schedule_seats` 설계 때)
 - `VIP`와 `vip`, `VIP `(끝 공백)를 같은 이름으로 보고 막을까? 막는다면 애플리케이션과 DB 중 어디서? (Q27)
 - `schedule_seats.seat_id` · `grade_id`에 FK 인덱스가 필요할까? 좌석 · 등급을 지울 일이 얼마나 있나? (Q33)
 - 회차를 만들 때 좌석마다 등급을 어디서 가져와 채울까? (Q8, Q33)

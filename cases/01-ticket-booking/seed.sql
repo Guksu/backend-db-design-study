@@ -32,8 +32,8 @@ WHERE c.title = '스터디 콘서트';
 -- 회차별 좌석 (Q2, Q33): 회차를 만들 때 공연장 좌석 수만큼 미리 만든다. 회차 2개 × 1,000석 = 2,000행
 -- 상태는 기본값 available(예약 가능)으로 시작한다 (Q34)
 -- 등급 배치는 실험용 예시다: A구역 VIP, B구역 R, C · D구역 S (회차를 만들 때 등급을 어디서 가져올지는 아직 정하지 않았다)
-INSERT INTO schedule_seats (schedule_id, seat_id, grade_id)
-SELECT sc.id, se.id, g.id
+INSERT INTO schedule_seats (schedule_id, seat_id, grade_id, concert_id, venue_id)
+SELECT sc.id, se.id, g.id, c.id, c.venue_id
 FROM schedules sc
 JOIN concerts c ON c.id = sc.concert_id
 JOIN seats se ON se.venue_id = c.venue_id
