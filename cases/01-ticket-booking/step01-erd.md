@@ -676,7 +676,39 @@ CREATE TABLE concerts (
 - 반영: schema.sql, seed.sql, `gradePalette.ts`, 제약조건 검증 3개(팔레트에 없는 키 · HEX · NULL), DB와 팔레트 동기화 테스트, 대비 테스트
 - 결정 대기: `sort_order` ← Q30
 
-## SQL 반영 (Q4~Q29)
+#### Q30. `sort_order`의 타입 · NULL · 제약조건은?
+
+**내 답**: `INTEGER`, NOT NULL, 0보다 커야 한다, `UNIQUE (concert_id, sort_order)`.
+
+**피드백**: 모두 맞다.
+
+- **UNIQUE (concert_id, sort_order)**: VIP와 R이 둘 다 `1`이면 `ORDER BY sort_order`의 결과 순서가 정해지지 않는다. 같은 쿼리인데 범례 순서가 바뀔 수 있다. 공연마다 순서가 하나씩이어야 한다.
+- **CHECK (sort_order > 0)**: 순서는 1부터. 0이나 음수를 "맨 앞에 두기" 같은 특별한 뜻으로 쓰는 일을 막는다.
+- **INTEGER**: 등급이 몇 개뿐이라 `SMALLINT`로도 충분하지만, 정수의 기본값으로 INTEGER를 쓰면 애플리케이션과 주고받을 때 헷갈릴 일이 적다. 크기 차이는 행마다 2바이트다.
+
+**설명: 사이에 끼워 넣을 때 생기는 일** (psql로 확인)
+
+VIP(1) · R(2) · S(3) 사이에 SR을 넣으려면, R과 S를 한 칸씩 미뤄야 한다.
+
+```sql
+UPDATE grades SET sort_order = sort_order + 1 WHERE concert_id = ? AND sort_order >= 2;
+```
+
+| 같은 데이터, 같은 UPDATE | 결과 |
+|---|---|
+| UNIQUE, 행이 1 · 2 · 3 순서로 저장됨 | **실패** `23505`: R을 3으로 바꾸는 순간 아직 S가 3이다 |
+| UNIQUE, 행이 3 · 2 · 1 순서로 저장됨 | 성공: S를 먼저 4로 바꾸고 R을 3으로 바꾼다 |
+| UNIQUE `DEFERRABLE INITIALLY IMMEDIATE` | 성공: 문장이 끝난 뒤 한 번에 검사한다 |
+
+PostgreSQL의 일반 UNIQUE는 **행을 하나 바꿀 때마다** 검사한다. 그래서 같은 UPDATE가 행이 저장된 순서에 따라 성공하기도, 실패하기도 한다. 테스트에서는 되다가 운영에서 갑자기 실패하는 종류의 버그다. ← Q31
+
+**정리**
+
+- 합의: `sort_order INTEGER NOT NULL CHECK (sort_order > 0)`, `CONSTRAINT grades_concert_sort_uq UNIQUE (concert_id, sort_order)`
+- 반영: schema.sql, 시드(VIP 1 · R 2 · S 3), 제약조건 검증 3개(같은 순서 · 0 · NULL)
+- 결정 대기: 등급 사이에 새 등급을 끼워 넣는 방법 ← Q31
+
+## SQL 반영 (Q4~Q30)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
@@ -721,6 +753,7 @@ CREATE TABLE concerts (
 | Q27 | 등급 이름 NULL · 빈 문자열 · 21글자 | 거부 `23502` · `23514` · `22001` |
 | Q25 | 없는 공연의 등급 | 거부 `23503` foreign_key_violation |
 | Q28 · Q29 | 팔레트에 없는 키(`purple`) · HEX(`#E74C3C`) · NULL | 거부 `23514` · `23514` · `23502` |
+| Q30 | 같은 공연에 같은 순서 · 순서 0 · NULL | 거부 `23505` · `23514` · `23502` |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 

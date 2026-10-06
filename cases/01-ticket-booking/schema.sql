@@ -45,7 +45,9 @@ CREATE TABLE grades (
   name       VARCHAR(20) NOT NULL CHECK (name <> ''),
   -- 키 목록은 gradePalette.ts(디자인 시스템)와 같아야 한다. 색을 더할 때 같은 배포에서 함께 고친다
   color      VARCHAR(20) NOT NULL CHECK (color IN ('red', 'orange', 'gold', 'green', 'teal', 'blue', 'pink', 'gray')),
-  CONSTRAINT grades_concert_name_uq UNIQUE (concert_id, name)
+  sort_order INTEGER     NOT NULL CHECK (sort_order > 0),
+  CONSTRAINT grades_concert_name_uq UNIQUE (concert_id, name),
+  CONSTRAINT grades_concert_sort_uq UNIQUE (concert_id, sort_order)
 );
 
 -- 설계 결정을 DB에도 남긴다. 시각화 화면의 ERD가 이 주석을 읽는다
@@ -85,4 +87,7 @@ COMMENT ON COLUMN grades.name IS '화면에 보이는 등급 이름. 20글자 �
 COMMENT ON CONSTRAINT grades_name_check ON grades IS '빈 문자열 금지 (Q27)';
 COMMENT ON COLUMN grades.color IS '디자인 시스템의 팔레트 키. 실제 색은 화면이 정한다 (Q28)';
 COMMENT ON CONSTRAINT grades_color_check ON grades IS '팔레트 키만 허용. 색 추가는 디자인 시스템 배포와 함께 가므로 CHECK (Q29)';
+COMMENT ON COLUMN grades.sort_order IS '범례 · 가격표에 보일 순서. 1부터 (Q30)';
+COMMENT ON CONSTRAINT grades_sort_order_check ON grades IS '0 이하 금지 (Q30)';
+COMMENT ON CONSTRAINT grades_concert_sort_uq ON grades IS '한 공연 안에서 순서가 겹치면 범례 순서가 정해지지 않는다 (Q30)';
 COMMENT ON CONSTRAINT grades_concert_name_uq ON grades IS '한 공연에 같은 이름의 등급 금지 (Q27). concert_id가 앞이라 FK 인덱스도 겸한다 (Q22와 같은 이유)';
