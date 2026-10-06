@@ -144,9 +144,9 @@ export const DECISIONS: Decision[] = [
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
   {
-    q: 'Q25 · Q26',
+    q: 'Q25 – Q27',
     topic: 'grades',
-    decision: '공연마다 정한다 (concerts 1 : N grades). id · concert_id · name · color · sort_order, 타입은 다음 문답에서',
+    decision: '공연마다 정한다 (concerts 1 : N grades). name VARCHAR(20), UNIQUE (concert_id, name). color · sort_order는 다음 문답에서',
     why: '공연마다 등급 구성과 이름이 다르다. 함께 쓰면 한 공연의 수정이 다른 공연 좌석맵을 바꾼다',
     open: true,
   },

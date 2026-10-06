@@ -591,9 +591,49 @@ CREATE TABLE concerts (
 - 합의: `grades(id, concert_id, name, color, sort_order)`
 - 결정 대기: 타입 · NULL · 제약조건 ← Q27
 
-## SQL 반영 (Q4~Q24)
+#### Q27. `grades` 각 컬럼의 타입 · NULL · 제약조건은?
 
-`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
+**내 답**: `name VARCHAR(20)`, 빈 문자열 금지, `UNIQUE (concert_id, name)`. `color`는 잘 모르겠다.
+
+**피드백 (name)**: 맞다.
+
+- **VARCHAR(20)**: PostgreSQL의 길이는 바이트가 아니라 글자 수라서 "스탠딩 지정석" 같은 한글 이름도 넉넉하다.
+- **UNIQUE (concert_id, name)**: 한 공연에 VIP가 두 개면 좌석맵 범례와 가격표가 어느 쪽인지 알 수 없다. 다른 공연이면 같은 이름이어도 된다. `concert_id`가 앞이라 Q22와 같은 이유로 FK 인덱스를 따로 만들 필요가 없다.
+- **NOT NULL은 꼭 같이 있어야 한다.** 답에 없었지만 Q18에서 "NOT NULL은 당연히 다 필요하다"고 한 원칙대로 넣었다. 이게 빠지면 두 제약이 모두 구멍 난다(psql로 확인).
+  - CHECK는 결과가 **거짓일 때만** 거부한다. `NULL <> ''`의 결과는 NULL(모름)이라 통과한다.
+  - UNIQUE는 NULL끼리를 서로 다르다고 본다(Q9). 같은 공연에 이름 없는 등급이 여러 개 들어간다.
+- **남은 구멍**: UNIQUE는 글자가 정확히 같을 때만 막는다. `VIP`, `vip`, `VIP `(끝에 공백)는 서로 다른 값이라 함께 들어간다. 애플리케이션에서 앞뒤 공백을 자를지, DB에서 `lower(btrim(name))`으로 막을지는 나중에 다룬다.
+
+**설명: color를 저장하는 방법** (psql로 확인)
+
+색을 적는 방법이 여러 가지라, 무엇을 받을지와 누가 그걸 보장할지를 정해야 한다.
+
+| 입력 | (A) 아무 문자열 | (B) HEX, 대소문자 무관<br>`~ '^#[0-9A-Fa-f]{6}$'` | (B') HEX, 대문자만<br>`~ '^#[0-9A-F]{6}$'` | (C) 팔레트 키<br>`IN ('red', 'blue', …)` |
+|---|---|---|---|---|
+| `#E74C3C` | 들어감 | 들어감 | 들어감 | 거부 |
+| `#e74c3c` | 들어감 | 들어감 | 거부 | 거부 |
+| `red` | 들어감 | 거부 | 거부 | 들어감 |
+| `rgb(231, 76, 60)` | 들어감 | 거부 | 거부 | 거부 |
+| `#E74C3` (한 자리 빠짐) | 들어감 | 거부 | 거부 | 거부 |
+| `gren` (오타) | 들어감 | 거부 | 거부 | 거부 |
+
+| 방법 | 장점 | 단점 |
+|---|---|---|
+| (A) 아무 문자열 | 가장 자유롭다 | 오타 · 형식 섞임을 막지 못한다. 화면이 색을 못 그리거나, 같은 색이 여러 표기로 저장된다 |
+| (B) HEX + CHECK | 형식이 하나로 정해지고 CSS에 그대로 쓴다. 대문자만 받으면 같은 색은 표기도 하나다 | 아무 색이나 고를 수 있어서, 배경과 구분이 안 되는 색이나 등급끼리 비슷한 색을 막지 못한다 |
+| (C) 팔레트 키 | 디자인이 정한 색만 쓴다. 실제 색은 화면이 정하므로 다크 모드나 대비 조정을 화면에서 한 번에 한다 | 새 색이 필요하면 CHECK를 고쳐 배포하거나(Q6의 CHECK) 팔레트 테이블에 행을 추가해야 한다. 운영자의 선택 폭이 좁다 |
+
+판단 기준은 Q6과 같다. **그 값을 누가 정하나.** 운영자가 공연마다 자유롭게 색을 고른다면 (B), 디자인 시스템이 정한 몇 가지 색 중에서 고른다면 (C)에 가깝다.
+
+**정리**
+
+- 합의: `name VARCHAR(20) NOT NULL CHECK (name <> '')`, `CONSTRAINT grades_concert_name_uq UNIQUE (concert_id, name)`, `concert_id`만의 FK 인덱스는 만들지 않는다
+- 반영: `grades(id, concert_id, name)`을 schema.sql에, 스터디 콘서트의 등급 VIP · R · S를 seed.sql에. 제약조건 검증 6개(같은 이름 · 다른 공연의 같은 이름 · NULL · 빈 문자열 · 21글자 · 없는 공연)
+- 결정 대기: `color`의 형식 · NULL ← Q28, `sort_order` ← 그다음
+
+## SQL 반영 (Q4~Q27)
+
+`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
 ## 눈으로 확인하기
 
@@ -631,6 +671,11 @@ CREATE TABLE concerts (
 | Q24 | 공연 시작과 같은 시각에 예매 오픈 | 거부 `23514` check_violation |
 | Q24 | 공연 시작을 예매 오픈보다 앞으로 옮기는 UPDATE | 거부 `23514` check_violation |
 
+| Q27 | 같은 공연에 같은 이름의 등급 | 거부 `23505` unique_violation |
+| Q27 | 다른 공연에 같은 이름의 등급 | 들어감 (의도) |
+| Q27 | 등급 이름 NULL · 빈 문자열 · 21글자 | 거부 `23502` · `23514` · `22001` |
+| Q25 | 없는 공연의 등급 | 거부 `23503` foreign_key_violation |
+
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 
 **동시 INSERT 시뮬레이션**
@@ -667,3 +712,4 @@ CREATE TABLE concerts (
 - 하루 단위 전체 회차 조회가 잦아지면 `starts_at` 인덱스를 따로 둘까? (Q22)
 - "오픈 일정 추후 공지"인 회차를 먼저 등록해야 한다면 `booking_opens_at`의 NOT NULL을 어떻게 할까? (Q24)
 - 회차 좌석이 다른 공연의 등급을 가리키지 못하게 DB가 막을 수 있을까? (Q25, `schedule_seats` 설계 때)
+- `VIP`와 `vip`, `VIP `(끝 공백)를 같은 이름으로 보고 막을까? 막는다면 애플리케이션과 DB 중 어디서? (Q27)

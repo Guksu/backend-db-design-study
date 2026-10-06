@@ -189,3 +189,23 @@ describe('Q20 · Q21 · Q22. 결정 반영', () => {
     expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['schedules_concert_starts_uq', 'schedules_pkey']);
   });
 });
+
+describe('Q25 · Q26 · Q27. grades', () => {
+  it('스터디 콘서트의 등급 3개가 있고, UNIQUE (concert_id, name)이 FK 인덱스를 겸한다', async () => {
+    const { rows } = await pool.query(`
+      SELECT g.name FROM grades g JOIN concerts c ON c.id = g.concert_id
+      WHERE c.title = '스터디 콘서트' ORDER BY g.id
+    `);
+    expect(rows.map((r) => r.name)).toEqual(['VIP', 'R', 'S']);
+
+    const grades = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'grades');
+    expect(grades?.constraints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'UNIQUE', columns: ['concert_id', 'name'] }),
+        expect.objectContaining({ kind: 'FOREIGN KEY', columns: ['concert_id'], refTable: 'concerts' }),
+      ]),
+    );
+    const preview = await previewTable(pool, SCHEMA, 'grades');
+    expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['grades_concert_name_uq', 'grades_pkey']);
+  });
+});

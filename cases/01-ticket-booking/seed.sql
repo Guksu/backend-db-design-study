@@ -21,3 +21,9 @@ FROM concerts c,
      (VALUES ('2026-12-24 19:00+09'::timestamptz, '2026-10-01 20:00+09'::timestamptz),
              ('2026-12-25 18:00+09'::timestamptz, '2026-10-08 20:00+09'::timestamptz)) AS s (starts_at, booking_opens_at)
 WHERE c.title = '스터디 콘서트';
+
+-- 등급 3개 (Q25–Q27): 스터디 콘서트의 등급 목록
+INSERT INTO grades (concert_id, name)
+SELECT c.id, g.name
+FROM concerts c, unnest(ARRAY['VIP', 'R', 'S']) AS g (name)
+WHERE c.title = '스터디 콘서트';

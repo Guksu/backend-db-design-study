@@ -39,6 +39,13 @@ CREATE TABLE schedules (
   CONSTRAINT schedules_opens_before_start_check CHECK (booking_opens_at < starts_at)
 );
 
+CREATE TABLE grades (
+  id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  concert_id BIGINT      NOT NULL REFERENCES concerts (id),
+  name       VARCHAR(20) NOT NULL CHECK (name <> ''),
+  CONSTRAINT grades_concert_name_uq UNIQUE (concert_id, name)
+);
+
 -- 설계 결정을 DB에도 남긴다. 시각화 화면의 ERD가 이 주석을 읽는다
 COMMENT ON TABLE venues IS '공연장 (정적). 총 좌석 수는 저장하지 않고 seats를 센다 (Q12)';
 COMMENT ON COLUMN venues.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
@@ -68,3 +75,10 @@ COMMENT ON COLUMN schedules.starts_at IS '실제로 일어나는 한 순간이�
 COMMENT ON CONSTRAINT schedules_concert_starts_uq ON schedules IS '같은 공연 · 같은 시각 회차 중복 방지 (Q20, Q21). concert_id가 앞이라 공연별 회차 조회와 FK 검사도 이 인덱스로 한다. 별도 FK 인덱스 없음 (Q22)';
 COMMENT ON COLUMN schedules.booking_opens_at IS '예매 오픈 시각. 1차 오픈 · 추가 회차처럼 회차마다 다를 수 있어 회차에 둔다 (Q23, Q24)';
 COMMENT ON CONSTRAINT schedules_opens_before_start_check ON schedules IS '예매는 공연 시작 전에 열려야 한다. 같은 시각도 안 된다 (Q24)';
+
+COMMENT ON TABLE grades IS '공연별 등급. 공연마다 등급 구성과 이름이 다르다 (Q25, Q26)';
+COMMENT ON COLUMN grades.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
+COMMENT ON COLUMN grades.concert_id IS '어느 공연의 등급인가 (Q25)';
+COMMENT ON COLUMN grades.name IS '화면에 보이는 등급 이름. 20글자 제한 (Q27)';
+COMMENT ON CONSTRAINT grades_name_check ON grades IS '빈 문자열 금지 (Q27)';
+COMMENT ON CONSTRAINT grades_concert_name_uq ON grades IS '한 공연에 같은 이름의 등급 금지 (Q27). concert_id가 앞이라 FK 인덱스도 겸한다 (Q22와 같은 이유)';
