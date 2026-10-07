@@ -186,7 +186,12 @@ describe('Q20 · Q21 · Q22. 결정 반영', () => {
       ]),
     );
     const preview = await previewTable(pool, SCHEMA, 'schedules');
-    expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['schedules_concert_starts_uq', 'schedules_pkey']);
+    // schedules_id_concert_uq(Q36)는 id가 앞이라 concert_id만으로 찾는 인덱스가 아니다
+    expect(preview?.indexes.map((i) => i.name).sort()).toEqual([
+      'schedules_concert_starts_uq',
+      'schedules_id_concert_uq',
+      'schedules_pkey',
+    ]);
   });
 });
 
@@ -213,6 +218,7 @@ describe('Q25 – Q30. grades', () => {
     expect(preview?.indexes.map((i) => i.name).sort()).toEqual([
       'grades_concert_name_uq',
       'grades_concert_sort_uq',
+      'grades_id_concert_uq',
       'grades_pkey',
     ]);
   });
@@ -314,5 +320,92 @@ describe('Q30 · Q31. 등급 순서 미루기', () => {
       await client.query('ROLLBACK');
       client.release();
     }
+  });
+});
+
+describe('Q32 · Q33. schedule_seats', () => {
+  it('회차를 만들 때 좌석 수만큼 미리 만든다: 회차 2개 × 1,000석 = 2,000행, 등급은 같은 공연의 것', async () => {
+    const { rows } = await pool.query(`
+      SELECT count(*)::int AS total,
+             count(DISTINCT ss.schedule_id)::int AS schedules,
+             count(*) FILTER (WHERE g.concert_id <> sc.concert_id)::int AS other_concert_grade
+      FROM schedule_seats ss
+      JOIN schedules sc ON sc.id = ss.schedule_id
+      JOIN grades g ON g.id = ss.grade_id
+    `);
+    expect(rows[0]).toEqual({ total: 2000, schedules: 2, other_concert_grade: 0 });
+  });
+
+  it('UNIQUE (schedule_id, seat_id)이 좌석맵 조회와 회차 FK 검사를 겸하고, 나머지 FK에는 인덱스를 두지 않는다 (Q37)', async () => {
+    const preview = await previewTable(pool, SCHEMA, 'schedule_seats');
+    expect(preview?.indexes.map((i) => i.name).sort()).toEqual(['schedule_seats_pkey', 'schedule_seats_schedule_seat_uq']);
+    const schedules = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'schedule_seats');
+    expect(schedules?.constraints).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'UNIQUE', columns: ['schedule_id', 'seat_id'] })]),
+    );
+  });
+});
+
+describe('Q34. 좌석 상태 ENUM', () => {
+  it('회차를 만들면 모든 좌석이 예약 가능(available)으로 시작한다', async () => {
+    const { rows } = await pool.query(`SELECT status::text, count(*)::int AS n FROM schedule_seats GROUP BY status`);
+    expect(rows).toEqual([{ status: 'available', n: 2000 }]);
+  });
+
+  it('ENUM은 선언한 순서로 정렬되고, 값을 뺄 수 없고, 새 값은 커밋 전에 쓸 수 없다', async () => {
+    const { rows } = await pool.query(`SELECT enum_range(NULL::seat_status)::text AS values`);
+    expect(rows[0].values).toBe('{available,held,sold}');
+
+    const client = await pool.connect();
+    const codeOf = async (sql: string) => {
+      await client.query('SAVEPOINT s');
+      try {
+        await client.query(sql);
+        return 'ok';
+      } catch (err) {
+        return (err as { code?: string }).code;
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT s');
+      }
+    };
+    try {
+      await client.query('BEGIN');
+      expect(await codeOf(`ALTER TYPE seat_status DROP VALUE 'held'`)).toBe('0A000');
+      await client.query(`ALTER TYPE seat_status ADD VALUE 'blocked'`);
+      expect(await codeOf(`SELECT 'blocked'::seat_status`)).toBe('55P04');
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
+  });
+});
+
+describe('Q35 · Q36. 복합 FK', () => {
+  it('회차 좌석의 FK 넷이 concert_id · venue_id를 함께 써서 같은 공연 · 같은 공연장을 강제한다', async () => {
+    const table = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'schedule_seats');
+    const fks = table?.constraints
+      .filter((c) => c.kind === 'FOREIGN KEY')
+      .map((c) => `${c.columns.join(',')}>${c.refTable}(${c.refColumns.join(',')})`)
+      .sort();
+    expect(fks).toEqual([
+      'concert_id,venue_id>concerts(id,venue_id)',
+      'grade_id,concert_id>grades(id,concert_id)',
+      'schedule_id,concert_id>schedules(id,concert_id)',
+      'seat_id,venue_id>seats(id,venue_id)',
+    ]);
+  });
+
+  it('시드의 복사본은 원본과 모두 같다', async () => {
+    const { rows } = await pool.query(`
+      SELECT count(*)::int AS total,
+             count(*) FILTER (WHERE ss.concert_id = sc.concert_id AND g.concert_id = sc.concert_id
+                                AND ss.venue_id = c.venue_id AND se.venue_id = c.venue_id)::int AS consistent
+      FROM schedule_seats ss
+      JOIN schedules sc ON sc.id = ss.schedule_id
+      JOIN concerts c ON c.id = sc.concert_id
+      JOIN grades g ON g.id = ss.grade_id
+      JOIN seats se ON se.id = ss.seat_id
+    `);
+    expect(rows[0]).toEqual({ total: 2000, consistent: 2000 });
   });
 });

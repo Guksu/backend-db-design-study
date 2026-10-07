@@ -150,4 +150,25 @@ export const DECISIONS: Decision[] = [
     why: '공연마다 등급 구성과 이름이 다르다. 색은 디자인 시스템과 함께 배포로 바뀐다. 끼워 넣기는 INSERT 한 번으로 끝나야 한다',
     verify: { page: 'constraints', label: '제약조건 검증' },
   },
+  {
+    q: 'Q32 – Q34',
+    topic: 'schedule_seats',
+    decision: '한 행 = 한 회차의 한 좌석. UNIQUE (schedule_id, seat_id), status는 ENUM (available · held · sold)',
+    why: '같은 좌석도 회차마다 따로 팔린다. 상태 목록은 코드와 함께 드물게 바뀌고 값이 빠질 일이 거의 없다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
+  },
+  {
+    q: 'Q35 · Q36',
+    topic: '공연 · 공연장 맞추기',
+    decision: 'schedule_seats에 concert_id · venue_id를 복사하고 복합 FK 넷으로 회차 · 등급 · 좌석이 같은 공연 · 공연장인지 강제한다',
+    why: 'FK 하나는 행이 있는지만 본다. 규칙을 테이블 정의에 두면 모든 쓰기 경로를 DB가 막는다',
+    verify: { page: 'constraints', label: '제약조건 검증' },
+  },
+  {
+    q: 'Q37',
+    topic: '회차 좌석의 FK 인덱스',
+    decision: '등급 · 좌석 · 공연 쪽 복합 FK에는 인덱스를 두지 않는다',
+    why: '부모 삭제는 드물고, 이 테이블은 쓰기가 가장 잦다 (Q16의 기준)',
+    verify: { page: 'index', label: 'FK 인덱스 비교' },
+  },
 ];
