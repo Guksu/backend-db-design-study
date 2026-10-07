@@ -172,9 +172,9 @@ export const DECISIONS: Decision[] = [
     verify: { page: 'index', label: 'FK 인덱스 비교' },
   },
   {
-    q: 'Q38 – Q40',
+    q: 'Q38 – Q41',
     topic: '가격',
-    decision: 'schedule_grade_prices(schedule_id, grade_id, price INTEGER ≥ 0), UNIQUE (schedule_id, grade_id). 결제 금액은 예약 이력에 스냅샷',
+    decision: 'schedule_grade_prices(schedule_id, grade_id, price INTEGER ≥ 0), UNIQUE (schedule_id, grade_id), concert_id 복합 FK로 같은 공연만. 결제 금액은 예약 이력에 스냅샷',
     why: '가격은 회차와 등급이 정한다. 원화 단가는 정수로 정확히 담기고, 실수 타입은 합계에 오차가 쌓인다',
     verify: { page: 'number', label: '숫자 타입 비교' },
   },

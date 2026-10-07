@@ -455,8 +455,8 @@ UPDATE concerts SET venue_id = v.id FROM v WHERE concerts.title = '스터디 콘
     decision: 'Q40',
     rule: 'UNIQUE (schedule_id, grade_id)',
     label: '12/24 회차 VIP에 가격을 하나 더 넣는다',
-    sql: `INSERT INTO schedule_grade_prices (schedule_id, grade_id, price)
-SELECT schedule_id, grade_id, 99000 FROM schedule_grade_prices ORDER BY id LIMIT 1`,
+    sql: `INSERT INTO schedule_grade_prices (schedule_id, grade_id, concert_id, price)
+SELECT schedule_id, grade_id, concert_id, 99000 FROM schedule_grade_prices ORDER BY id LIMIT 1`,
     expect: 'rejected',
     code: '23505',
   },
@@ -497,14 +497,15 @@ SELECT schedule_id, grade_id, 99000 FROM schedule_grade_prices ORDER BY id LIMIT
   },
   {
     id: 'price-other-concert-grade',
-    decision: 'Q40',
-    rule: '다른 공연의 등급 가격 (아직 못 막는 구멍)',
+    decision: 'Q40 · Q41',
+    rule: '(grade_id, concert_id) → grades FK',
     label: '스터디 콘서트 회차에 다른 공연 등급의 가격을 매긴다',
     sql: `WITH c AS (INSERT INTO concerts (venue_id, title) VALUES (${STUDY_ARENA}, '다른 공연') RETURNING id),
      g AS (INSERT INTO grades (concert_id, name, color, sort_order) SELECT id, 'VIP', 'red', 10 FROM c RETURNING id)
-INSERT INTO schedule_grade_prices (schedule_id, grade_id, price)
-SELECT (SELECT min(id) FROM schedules), g.id, 99000 FROM g`,
-    expect: 'accepted',
+INSERT INTO schedule_grade_prices (schedule_id, grade_id, concert_id, price)
+SELECT (SELECT min(id) FROM schedules), g.id, ${STUDY_CONCERT}, 99000 FROM g`,
+    expect: 'rejected',
+    code: '23503',
   },
   {
     id: 'concert-duplicate-title',

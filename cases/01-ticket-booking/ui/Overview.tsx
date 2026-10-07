@@ -19,7 +19,7 @@ const EXPERIMENTS: ExperimentRow[] = [
     id: 'constraints',
     title: '제약조건 검증',
     question: '정한 규칙을 어기는 INSERT를 DB가 실제로 거부하나요?',
-    decisions: 'Q4 · Q5 · Q9–Q15 · Q21 · Q24 · Q27–Q36 · Q40',
+    decisions: 'Q4 · Q5 · Q9–Q15 · Q21 · Q24 · Q27–Q36 · Q40 · Q41',
     last: () => {
       const r = readLastRun<{ passed: number; total: number }>('constraints');
       if (!r) return { status: 'stopped', text: '아직 실행 안 함' };
@@ -127,7 +127,7 @@ export function Overview() {
                 value: `${PLANNED_TABLES.filter((t) => !built.includes(t)).length}개`,
                 hint: PLANNED_TABLES.filter((t) => !built.includes(t)).join(', '),
               },
-              { label: '문답', value: 'Q1 – Q40' },
+              { label: '문답', value: 'Q1 – Q41' },
               { label: '실험', value: `${EXPERIMENTS.length}개`, hint: '실제 PostgreSQL에서 실행' },
             ]}
           />

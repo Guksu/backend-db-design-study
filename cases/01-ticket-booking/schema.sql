@@ -79,10 +79,14 @@ CREATE TABLE schedule_seats (
 -- 판매 가격 (Q38–Q40). 가격은 회차 + 등급이 정한다. 결제 금액은 예약 이력에 따로 남긴다
 CREATE TABLE schedule_grade_prices (
   id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  schedule_id BIGINT  NOT NULL REFERENCES schedules (id),
-  grade_id    BIGINT  NOT NULL REFERENCES grades (id),
+  schedule_id BIGINT  NOT NULL,
+  grade_id    BIGINT  NOT NULL,
+  -- 검증용 복사본 (Q41). 회차와 등급이 같은 공연의 것임을 복합 FK로 강제한다. NULL이면 검사를 건너뛰므로 NOT NULL
+  concert_id  BIGINT  NOT NULL,
   price       INTEGER NOT NULL CHECK (price >= 0),
-  CONSTRAINT schedule_grade_prices_schedule_grade_uq UNIQUE (schedule_id, grade_id)
+  CONSTRAINT schedule_grade_prices_schedule_grade_uq UNIQUE (schedule_id, grade_id),
+  CONSTRAINT schedule_grade_prices_schedule_fk FOREIGN KEY (schedule_id, concert_id) REFERENCES schedules (id, concert_id),
+  CONSTRAINT schedule_grade_prices_grade_fk    FOREIGN KEY (grade_id, concert_id)    REFERENCES grades (id, concert_id)
 );
 
 -- 설계 결정을 DB에도 남긴다. 시각화 화면의 ERD가 이 주석을 읽는다
@@ -152,3 +156,6 @@ COMMENT ON COLUMN schedule_grade_prices.id IS '내부 PK는 BIGINT IDENTITY로 �
 COMMENT ON COLUMN schedule_grade_prices.price IS '원 단위 정수. 실수 타입은 합계에 오차가 쌓이고 money는 통화 설정을 탄다 (Q40)';
 COMMENT ON CONSTRAINT schedule_grade_prices_price_check ON schedule_grade_prices IS '음수 금지. 0원(초대권)은 허용 (Q40)';
 COMMENT ON CONSTRAINT schedule_grade_prices_schedule_grade_uq ON schedule_grade_prices IS '한 회차의 한 등급에 가격은 하나 (Q40)';
+COMMENT ON COLUMN schedule_grade_prices.concert_id IS '검증용 복사본. 회차와 등급이 같은 공연의 것임을 복합 FK로 강제한다 (Q41)';
+COMMENT ON CONSTRAINT schedule_grade_prices_schedule_fk ON schedule_grade_prices IS '회차와 그 회차의 공연 (Q41)';
+COMMENT ON CONSTRAINT schedule_grade_prices_grade_fk ON schedule_grade_prices IS '등급이 같은 공연의 것이어야 한다. 다른 공연 등급의 가격 금지 (Q41). 등급 삭제가 드물어 자식 쪽 인덱스는 두지 않는다 (Q37과 같은 기준)';

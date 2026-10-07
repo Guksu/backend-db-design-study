@@ -976,7 +976,22 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 - 반영: schema.sql, 시드 6행(12/24 VIP 165,000 · R 143,000 · S 121,000, 12/25는 각 11,000원 더), 제약조건 검증 6개(같은 회차 · 등급 중복 · 음수 · NULL · 0원 허용 · 21억 초과 · 다른 공연 등급), 숫자 타입 비교 실험 화면, SQLSTATE 표에 `22003`
 - 결정 대기: 회차와 등급이 같은 공연의 것인지 보장하는 방법 ← Q41
 
-## SQL 반영 (Q4~Q40)
+#### Q41. 가격 테이블에서도 다른 공연의 등급을 막을까?
+
+**내 답**: 막는다. `concert_id`를 복사해서 복합 FK로 한다.
+
+**피드백**: 맞다. 그리고 **필요한 것만** 복사했다. 이 테이블은 좌석과 관계가 없으니 `venue_id`는 필요 없다. Q36에서 공연장까지 복사한 건 좌석이 공연장에 속하기 때문이었다. 같은 기법이라도 지켜야 할 규칙이 무엇인지에 따라 복사할 컬럼이 정해진다.
+
+- `(schedule_id, concert_id) → schedules (id, concert_id)`, `(grade_id, concert_id) → grades (id, concert_id)`. 부모 쪽 `UNIQUE (id, concert_id)`는 Q36에서 이미 만들어 둬서 그대로 쓴다.
+- 단일 FK 둘은 복합 FK가 대신하므로 지웠다(Q36과 같은 이유).
+- 자식 쪽 인덱스는 두지 않는다. 회차 FK는 `UNIQUE (schedule_id, grade_id)`의 앞 컬럼이 받치고, 등급 삭제는 드물다(Q37과 같은 기준). 이 테이블은 회차 × 등급이라 작기도 하다.
+
+**정리**
+
+- 합의: `schedule_grade_prices`에 `concert_id`(NOT NULL, 검증용 복사본)와 복합 FK 둘
+- 반영: schema.sql, 시드, "다른 공연 등급의 가격"이 "들어감"에서 거부 `23503`으로. 테스트가 FK 묶음과 시드 6행의 복사본을 확인한다
+
+## SQL 반영 (Q4~Q41)
 
 `venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`, `seat_status`, `schedule_grade_prices`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
@@ -1032,7 +1047,7 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 | Q36 | 등급에 맞춰 concert_id를 거짓으로 · 회차 좌석이 있는 공연의 공연장 바꾸기 | 거부 `23503` · `23503` |
 | Q40 | 같은 회차 · 등급에 가격 둘 · 음수 · NULL · 21억 초과 | 거부 `23505` · `23514` · `23502` · `22003` |
 | Q40 | 0원(초대권) | 들어감 (의도) |
-| Q40 | 회차에 다른 공연 등급의 가격 | **들어감** (아직 못 막는 구멍) |
+| Q40 · Q41 | 회차에 다른 공연 등급의 가격 | 거부 `23503` (Q41 전까지는 들어갔다) |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 

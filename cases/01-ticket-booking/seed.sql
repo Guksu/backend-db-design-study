@@ -41,8 +41,8 @@ JOIN grades g ON g.concert_id = c.id
  AND g.name = CASE se.section WHEN 'A' THEN 'VIP' WHEN 'B' THEN 'R' ELSE 'S' END;
 
 -- 판매 가격 (Q38–Q40): 회차 2개 × 등급 3개 = 6행. 12/25 추가 회차는 성탄절이라 조금 비싸다 (실험용 예시)
-INSERT INTO schedule_grade_prices (schedule_id, grade_id, price)
-SELECT sc.id, g.id, p.price
+INSERT INTO schedule_grade_prices (schedule_id, grade_id, concert_id, price)
+SELECT sc.id, g.id, sc.concert_id, p.price
 FROM schedules sc
 JOIN grades g ON g.concert_id = sc.concert_id
 JOIN (VALUES ('2026-12-24 19:00+09'::timestamptz, 'VIP', 165000), ('2026-12-24 19:00+09', 'R', 143000), ('2026-12-24 19:00+09', 'S', 121000),

@@ -443,3 +443,23 @@ describe('Q40. 숫자 타입과 가격', () => {
     ]);
   });
 });
+
+describe('Q41. 가격도 같은 공연의 회차 · 등급만', () => {
+  it('가격 테이블의 FK 둘이 concert_id를 함께 쓰고, 시드 6행의 복사본이 원본과 같다', async () => {
+    const table = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'schedule_grade_prices');
+    const fks = table?.constraints
+      .filter((c) => c.kind === 'FOREIGN KEY')
+      .map((c) => `${c.columns.join(',')}>${c.refTable}(${c.refColumns.join(',')})`)
+      .sort();
+    expect(fks).toEqual(['grade_id,concert_id>grades(id,concert_id)', 'schedule_id,concert_id>schedules(id,concert_id)']);
+
+    const { rows } = await pool.query(`
+      SELECT count(*)::int AS total,
+             count(*) FILTER (WHERE p.concert_id = sc.concert_id AND g.concert_id = sc.concert_id)::int AS consistent
+      FROM schedule_grade_prices p
+      JOIN schedules sc ON sc.id = p.schedule_id
+      JOIN grades g ON g.id = p.grade_id
+    `);
+    expect(rows[0]).toEqual({ total: 6, consistent: 6 });
+  });
+});
