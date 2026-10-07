@@ -409,3 +409,37 @@ describe('Q35 · Q36. 복합 FK', () => {
     expect(rows[0]).toEqual({ total: 2000, consistent: 2000 });
   });
 });
+
+describe('Q40. 숫자 타입과 가격', () => {
+  it('REAL은 합계 · 큰 값에서, DOUBLE은 소수 덧셈에서 틀리고, INTEGER는 큰 곱셈에서 넘치고, MONEY는 달러로 보인다', async () => {
+    const { runNumberLab } = await import('../numberLab');
+    const rows = await runNumberLab(pool);
+    const cell = (id: string, type: string) => rows.find((r) => r.id === id)!.cells.find((c) => c.type === type)!;
+
+    expect(cell('sum', 'real').ok).toBe(false);
+    expect(cell('large', 'real').ok).toBe(false);
+    expect(cell('tenths', 'double precision').ok).toBe(false);
+    expect(cell('multiply', 'integer').code).toBe('22003');
+    expect(cell('multiply', 'bigint').ok).toBe(true);
+    expect(cell('display', 'money').shown).toMatch(/^\$/);
+    for (const id of ['sum', 'tenths', 'large', 'multiply', 'display']) expect(cell(id, 'numeric').ok).toBe(true);
+  });
+
+  it('시드: 회차 2개 × 등급 3개 = 가격 6행, 회차마다 다를 수 있다', async () => {
+    const { rows } = await pool.query(`
+      SELECT to_char(sc.starts_at AT TIME ZONE 'Asia/Seoul', 'MM-DD') AS day, g.name, p.price
+      FROM schedule_grade_prices p
+      JOIN schedules sc ON sc.id = p.schedule_id
+      JOIN grades g ON g.id = p.grade_id
+      ORDER BY sc.starts_at, g.sort_order
+    `);
+    expect(rows.map((r) => `${r.day} ${r.name} ${r.price}`)).toEqual([
+      '12-24 VIP 165000',
+      '12-24 R 143000',
+      '12-24 S 121000',
+      '12-25 VIP 176000',
+      '12-25 R 154000',
+      '12-25 S 132000',
+    ]);
+  });
+});

@@ -942,9 +942,43 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 - 합의: 판매 가격은 (회차, 등급) 가격 테이블에 둔다. 좌석별 가격 차이는 별도 등급(예: VIP 시야제한)으로 표현한다. 결제 금액은 예약 이력에 스냅샷으로 남긴다(예약 이력 설계 때 반영)
 - 결정 대기: 가격 테이블의 이름 · 컬럼 · 타입 · 제약조건 ← Q40
 
-## SQL 반영 (Q4~Q37)
+#### Q40. 가격 테이블의 이름 · 컬럼 · 타입 · 제약조건은?
 
-`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`, `seat_status`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
+**내 답**: `schedule_grade_prices(id, schedule_id, grade_id, price INTEGER)`, UNIQUE. 가격은 음수와 NULL을 허용하지 않는다. INTEGER가 좋아 보이지만 숫자 타입들의 차이는 잘 모르겠다.
+
+**피드백**: 구성이 맞다. UNIQUE는 `(schedule_id, grade_id)`로 읽었다. 한 회차의 한 등급에 가격이 둘이면 어느 값으로 팔지 정할 수 없다. 음수만 막았으므로 **0원(초대권)은 들어간다**.
+
+**설명: 돈을 담는 숫자 타입** (실험실 → 숫자 타입 비교)
+
+여섯 타입에 같은 값을 넣고 같은 계산을 시켰다.
+
+| 계산 | 정답 | INTEGER | BIGINT | NUMERIC | REAL | DOUBLE | MONEY |
+|---|---|---|---|---|---|---|---|
+| 99,900원 1,000장 합계 | 99,900,000 | 정확 | 정확 | 정확 | **99,901,312** (+1,312원) | 정확 | 정확 |
+| 0.1원을 10번 더하기 | 1 | 소수 없음 | 소수 없음 | 정확 | **1.0000001** | **0.9999999999999999** | 정확 |
+| 16,777,217원 저장 | 16,777,217 | 정확 | 정확 | 정확 | **16,777,216** | 정확 | 정확 |
+| 165,000원 × 20,000장 | 3,300,000,000 | **`22003` 넘침** | 정확 | 정확 | 정확 | 정확 | 정확 |
+| 165,000원 꺼내 보이기 | 165000 | 정확 | 정확 | 정확 | 정확 | 정확 | **$165,000.00** |
+| 값 하나의 크기 | | 4바이트 | 8바이트 | 10바이트 | 4바이트 | 8바이트 | 8바이트 |
+
+- **REAL · DOUBLE (2진수 실수)**: 0.1이나 99,900을 2진수로 정확히 못 나타내서 더할수록 오차가 쌓인다. REAL은 유효 숫자가 7자리 남짓이라 1,677만 원을 넘으면 1원 단위가 사라진다. 돈에는 쓰지 않는다.
+- **MONEY**: 계산은 정확하지만 서버의 통화 설정(`lc_monetary`, 이 실험실은 `en_US`)에 따라 기호와 소수 자리가 붙는다. 원화가 "$165,000.00"으로 보인다. 설정이 다른 서버로 옮기면 값의 의미가 흔들려서 보통 쓰지 않는다.
+- **NUMERIC (10진수)**: 소수까지 정확하다. 달러의 센트, 할인율, 수수료처럼 소수가 필요한 계산에 쓴다. 크고 조금 느리다.
+- **INTEGER · BIGINT**: 정수를 정확히 담는다. 원화 단가는 소수가 없고 21억을 넘지 않으니 INTEGER로 충분하다. 다만 **INTEGER끼리 곱해 21억을 넘으면 실패한다.** `SUM`은 알아서 BIGINT로 돌려주지만, `price * 수량`은 BIGINT로 바꿔서 곱해야 한다.
+
+실무 규칙으로 정리하면: 원화 단가는 INTEGER, 합계는 BIGINT, 할인율 계산은 NUMERIC으로 한 뒤 반올림 규칙을 정해 정수로 되돌린다.
+
+**아직 빠진 것**: Q36의 교훈이 이 테이블에도 그대로 적용된다. 회차와 등급을 따로 가리키는 FK 둘로는 **다른 공연의 등급에 가격을 매기는 것**을 막지 못한다. 제약조건 검증에 넣어 보니 지금은 들어간다. ← Q41
+
+**정리**
+
+- 합의: `schedule_grade_prices(id, schedule_id, grade_id, price INTEGER NOT NULL CHECK (price >= 0))`, `UNIQUE (schedule_id, grade_id)`
+- 반영: schema.sql, 시드 6행(12/24 VIP 165,000 · R 143,000 · S 121,000, 12/25는 각 11,000원 더), 제약조건 검증 6개(같은 회차 · 등급 중복 · 음수 · NULL · 0원 허용 · 21억 초과 · 다른 공연 등급), 숫자 타입 비교 실험 화면, SQLSTATE 표에 `22003`
+- 결정 대기: 회차와 등급이 같은 공연의 것인지 보장하는 방법 ← Q41
+
+## SQL 반영 (Q4~Q40)
+
+`venues`, `seats`, `concerts`, `schedules`와 `concerts_venue_id_idx`, `schedules_concert_starts_uq`, `schedules_opens_before_start_check`, `grades`, `schedule_seats`, `seat_status`, `schedule_grade_prices`를 [schema.sql](schema.sql)과 [seed.sql](seed.sql)에 반영했다. 테이블 · 컬럼 · 제약조건마다 `COMMENT ON`으로 결정 근거(Q번호)를 DB에도 남겼다. 시각화 화면의 ERD 인스펙터가 이 주석을 읽는다.
 
 ## 눈으로 확인하기
 
@@ -959,6 +993,7 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 | 실험 › FK 인덱스 비교 | 인덱스 유무에 따른 조회 · 삭제 · 쓰기 · 공간과 실행 계획 (Q16) |
 | 실험 › 시간 타입 비교 | 같은 시각을 timestamp와 timestamptz에 넣고 세션 시간대별로 읽기, 프론트엔드 표시 방법 (Q18, Q19) |
 | 실험 › 복합 인덱스 순서 | UNIQUE 컬럼 순서에 따른 인덱스 안의 정렬 순서, 질문별 비교표, 실행 계획 (Q22) |
+| 실험 › 숫자 타입 비교 | 같은 계산을 INTEGER · BIGINT · NUMERIC · REAL · DOUBLE · MONEY로 해 본 결과와 정확도 (Q40) |
 
 모든 실험 페이지 맨 위의 "실험 안내"가 확인할 것 · 방법 · 읽는 법 · 결과를 한 줄씩 보여 주고, "자세히"와 제목 옆 "정보"에서 긴 설명을 볼 수 있다.
 
@@ -995,6 +1030,9 @@ FOREIGN KEY (seat_id,     venue_id)   REFERENCES seats     (id, venue_id)    -- 
 | Q25 · Q36 | 회차 좌석에 다른 공연의 등급 | 거부 `23503` (Q36 전까지는 들어갔다) |
 | Q35 · Q36 | 회차 좌석에 다른 공연장의 좌석 | 거부 `23503` (Q36 전까지는 들어갔다) |
 | Q36 | 등급에 맞춰 concert_id를 거짓으로 · 회차 좌석이 있는 공연의 공연장 바꾸기 | 거부 `23503` · `23503` |
+| Q40 | 같은 회차 · 등급에 가격 둘 · 음수 · NULL · 21억 초과 | 거부 `23505` · `23514` · `23502` · `22003` |
+| Q40 | 0원(초대권) | 들어감 (의도) |
+| Q40 | 회차에 다른 공연 등급의 가격 | **들어감** (아직 못 막는 구멍) |
 
 판정은 결과(거부 · 들어감)와 SQLSTATE가 모두 기대와 같아야 "기대대로"다 (Q24에서 바꿈).
 

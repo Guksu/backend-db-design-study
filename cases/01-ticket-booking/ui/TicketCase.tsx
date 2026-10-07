@@ -16,6 +16,7 @@ import type { TableInfo } from '../../../lab/introspect';
 import { ConstraintsPage } from './ConstraintsPage';
 import { IndexOrderPage } from './IndexOrderPage';
 import { IndexPage } from './IndexPage';
+import { NumberPage } from './NumberPage';
 import { Overview } from './Overview';
 import { RacePage } from './RacePage';
 import { SchemaPage } from './SchemaPage';
@@ -37,6 +38,7 @@ export const STEP1_PAGES: PageDef[] = [
   { id: 'index', title: 'FK 인덱스 비교', experiment: true, Component: IndexPage },
   { id: 'time', title: '시간 타입 비교', experiment: true, Component: TimePage },
   { id: 'index-order', title: '복합 인덱스 순서', experiment: true, Component: IndexOrderPage },
+  { id: 'number', title: '숫자 타입 비교', experiment: true, Component: NumberPage },
 ];
 
 const PLANNED_STEPS = [

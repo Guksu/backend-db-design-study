@@ -302,6 +302,40 @@ export const HELP_TOPICS: Record<string, HelpTopic> = {
     ),
   },
 
+  'number-types': {
+    title: '돈은 어떤 숫자 타입에',
+    body: (
+      <>
+        <dl className="help-terms">
+          <dt>INTEGER · BIGINT</dt>
+          <dd>
+            정수를 정확히 담아요. INTEGER는 4바이트로 약 21억까지, BIGINT는 8바이트로 훨씬 커요. 원화처럼 소수가 없는
+            돈에 맞아요. INTEGER끼리 곱해 21억을 넘으면 <code>22003</code>으로 실패해요. SUM은 알아서 BIGINT로 돌려줘요.
+          </dd>
+          <dt>NUMERIC</dt>
+          <dd>
+            10진수를 정확히 담아요. 달러의 센트, 할인율, 수수료처럼 소수가 필요한 계산에 써요. 정수보다 크고 조금
+            느려요.
+          </dd>
+          <dt>REAL · DOUBLE PRECISION</dt>
+          <dd>
+            2진수 실수예요. 0.1을 2진수로 정확히 못 나타내서, 더할수록 오차가 쌓여요. 과학 계산용이고 돈에는 쓰지
+            않아요.
+          </dd>
+          <dt>MONEY</dt>
+          <dd>
+            정확하지만 서버의 통화 설정(<code>lc_monetary</code>)을 따라 기호와 소수 자리가 붙어요. 원화인데
+            "$165,000.00"으로 나올 수 있어서, 보통 쓰지 않아요.
+          </dd>
+        </dl>
+        <p>
+          실무 규칙: 원화 단가는 INTEGER(또는 BIGINT), 합계는 BIGINT, 비율 계산은 NUMERIC으로 한 뒤 반올림 규칙을 정해
+          정수로 되돌려요.
+        </p>
+      </>
+    ),
+  },
+
   timezone: {
     title: 'timestamp와 timestamptz',
     body: (

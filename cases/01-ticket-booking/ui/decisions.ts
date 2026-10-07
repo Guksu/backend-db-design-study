@@ -172,10 +172,10 @@ export const DECISIONS: Decision[] = [
     verify: { page: 'index', label: 'FK 인덱스 비교' },
   },
   {
-    q: 'Q38 · Q39',
+    q: 'Q38 – Q40',
     topic: '가격',
-    decision: '판매 가격은 (회차, 등급) 가격 테이블, 결제 금액은 예약 이력에 스냅샷. 좌석별 차이는 별도 등급으로. 컬럼은 다음 문답에서',
-    why: '가격은 회차와 등급이 정한다. 좌석에 두면 같은 값이 좌석 수만큼 반복되고 일부만 고쳐질 수 있다',
-    open: true,
+    decision: 'schedule_grade_prices(schedule_id, grade_id, price INTEGER ≥ 0), UNIQUE (schedule_id, grade_id). 결제 금액은 예약 이력에 스냅샷',
+    why: '가격은 회차와 등급이 정한다. 원화 단가는 정수로 정확히 담기고, 실수 타입은 합계에 오차가 쌓인다',
+    verify: { page: 'number', label: '숫자 타입 비교' },
   },
 ];
