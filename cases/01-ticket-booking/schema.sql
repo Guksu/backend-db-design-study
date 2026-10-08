@@ -151,7 +151,7 @@ COMMENT ON CONSTRAINT concerts_id_venue_uq ON concerts IS '복합 FK (concert_id
 COMMENT ON CONSTRAINT schedules_id_concert_uq ON schedules IS '복합 FK (schedule_id, concert_id)의 대상 (Q36)';
 COMMENT ON CONSTRAINT grades_id_concert_uq ON grades IS '복합 FK (grade_id, concert_id)의 대상 (Q36)';
 
-COMMENT ON TABLE schedule_grade_prices IS '판매 가격(가격표). 한 행 = 한 회차의 한 등급 가격. 좌석별 차이는 별도 등급으로 (Q38, Q39)';
+COMMENT ON TABLE schedule_grade_prices IS '판매 가격(가격표). 한 행 = 한 회차의 한 등급 가격. 좌석별 차이는 별도 등급으로 (Q38, Q39). 좌석이 가격을 가리키는 FK는 두지 않는다: 좌석을 먼저 깔고 가격은 오픈 전에 정하므로, 가격 없는 좌석은 판매 전에 애플리케이션이 점검한다 (Q42)';
 COMMENT ON COLUMN schedule_grade_prices.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
 COMMENT ON COLUMN schedule_grade_prices.price IS '원 단위 정수. 실수 타입은 합계에 오차가 쌓이고 money는 통화 설정을 탄다 (Q40)';
 COMMENT ON CONSTRAINT schedule_grade_prices_price_check ON schedule_grade_prices IS '음수 금지. 0원(초대권)은 허용 (Q40)';

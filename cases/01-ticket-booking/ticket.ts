@@ -508,6 +508,15 @@ SELECT (SELECT min(id) FROM schedules), g.id, ${STUDY_CONCERT}, 99000 FROM g`,
     code: '23503',
   },
   {
+    id: 'seat-grade-without-price',
+    decision: 'Q42',
+    rule: '좌석 → 가격 FK 없음 (의도: 판매 전에 애플리케이션이 점검)',
+    label: '가격이 없는 등급(VIP 시야제한)으로 회차 좌석 하나의 등급을 바꾼다',
+    sql: `WITH g AS (INSERT INTO grades (concert_id, name, color, sort_order) VALUES (${STUDY_CONCERT}, 'VIP 시야제한', 'gray', 40) RETURNING id)
+UPDATE schedule_seats SET grade_id = g.id FROM g WHERE schedule_seats.id = (SELECT min(id) FROM schedule_seats)`,
+    expect: 'accepted',
+  },
+  {
     id: 'concert-duplicate-title',
     decision: 'Q15',
     rule: 'title에 UNIQUE 없음 (의도)',
@@ -516,6 +525,20 @@ SELECT (SELECT min(id) FROM schedules), g.id, ${STUDY_CONCERT}, 99000 FROM g`,
     expect: 'accepted',
   },
 ];
+
+/**
+ * 판매 전 점검 (Q42). 가격표에 없는 (회차, 등급)의 좌석을 센다.
+ * 좌석을 먼저 깔고 가격은 오픈 전에 정할 수 있게 DB는 막지 않으므로, 애플리케이션이 판매를 열기 전에 돌린다
+ */
+export const UNPRICED_SEATS_SQL = `
+SELECT ss.schedule_id, ss.grade_id, count(*)::int AS seats
+FROM schedule_seats ss
+WHERE NOT EXISTS (
+  SELECT 1 FROM schedule_grade_prices p
+  WHERE p.schedule_id = ss.schedule_id AND p.grade_id = ss.grade_id
+)
+GROUP BY ss.schedule_id, ss.grade_id
+ORDER BY ss.schedule_id, ss.grade_id`;
 
 export interface ConstraintCheckResult {
   id: string;

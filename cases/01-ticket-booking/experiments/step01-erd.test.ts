@@ -9,6 +9,7 @@ import {
   runConstraintCheck,
   runRace,
   SCHEMA,
+  UNPRICED_SEATS_SQL,
 } from '../ticket';
 
 const pool = createTicketPool();
@@ -461,5 +462,40 @@ describe('Q41. 가격도 같은 공연의 회차 · 등급만', () => {
       JOIN grades g ON g.id = p.grade_id
     `);
     expect(rows[0]).toEqual({ total: 6, consistent: 6 });
+  });
+});
+
+describe('Q42. 가격 없는 좌석은 애플리케이션이 점검', () => {
+  it('DB는 막지 않고, 판매 전 점검 쿼리가 가격 없는 (회차, 등급)을 찾아낸다', async () => {
+    expect((await pool.query(UNPRICED_SEATS_SQL)).rows).toEqual([]);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows: grade } = await client.query(`
+        INSERT INTO grades (concert_id, name, color, sort_order)
+        SELECT concert_id, 'VIP 시야제한', 'gray', 40 FROM grades ORDER BY id LIMIT 1
+        RETURNING id`);
+      // 좌석부터 깔고 가격은 나중에 정하는 순서가 DB에서 허용된다
+      const { rows: seats } = await client.query(
+        `UPDATE schedule_seats SET grade_id = $1
+         WHERE id IN (SELECT id FROM schedule_seats WHERE schedule_id = (SELECT min(id) FROM schedules) ORDER BY id LIMIT 4)
+         RETURNING schedule_id`,
+        [grade[0].id],
+      );
+      const { rows: found } = await client.query(UNPRICED_SEATS_SQL);
+      expect(found).toEqual([{ schedule_id: seats[0].schedule_id, grade_id: grade[0].id, seats: 4 }]);
+
+      // 오픈 전에 가격을 매기면 점검을 통과한다
+      await client.query(
+        `INSERT INTO schedule_grade_prices (schedule_id, grade_id, concert_id, price)
+         SELECT $1, id, concert_id, 132000 FROM grades WHERE id = $2`,
+        [seats[0].schedule_id, grade[0].id],
+      );
+      expect((await client.query(UNPRICED_SEATS_SQL)).rows).toEqual([]);
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
   });
 });
