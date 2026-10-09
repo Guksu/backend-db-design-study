@@ -451,6 +451,72 @@ UPDATE concerts SET venue_id = v.id FROM v WHERE concerts.title = '스터디 콘
     code: '23503',
   },
   {
+    id: 'price-duplicate',
+    decision: 'Q40',
+    rule: 'UNIQUE (schedule_id, grade_id)',
+    label: '12/24 회차 VIP에 가격을 하나 더 넣는다',
+    sql: `INSERT INTO schedule_grade_prices (schedule_id, grade_id, concert_id, price)
+SELECT schedule_id, grade_id, concert_id, 99000 FROM schedule_grade_prices ORDER BY id LIMIT 1`,
+    expect: 'rejected',
+    code: '23505',
+  },
+  {
+    id: 'price-negative',
+    decision: 'Q40',
+    rule: 'CHECK (price >= 0)',
+    label: '가격을 -1,000원으로 바꾼다',
+    sql: `UPDATE schedule_grade_prices SET price = -1000 WHERE id = (SELECT min(id) FROM schedule_grade_prices)`,
+    expect: 'rejected',
+    code: '23514',
+  },
+  {
+    id: 'price-null',
+    decision: 'Q40',
+    rule: 'price NOT NULL',
+    label: '가격을 NULL로 바꾼다',
+    sql: `UPDATE schedule_grade_prices SET price = NULL WHERE id = (SELECT min(id) FROM schedule_grade_prices)`,
+    expect: 'rejected',
+    code: '23502',
+  },
+  {
+    id: 'price-zero',
+    decision: 'Q40',
+    rule: '0원은 허용 (의도: 초대권)',
+    label: '가격을 0원으로 바꾼다',
+    sql: `UPDATE schedule_grade_prices SET price = 0 WHERE id = (SELECT min(id) FROM schedule_grade_prices)`,
+    expect: 'accepted',
+  },
+  {
+    id: 'price-over-integer',
+    decision: 'Q40',
+    rule: 'price INTEGER (약 21억까지)',
+    label: '가격을 2,147,483,648원으로 바꾼다',
+    sql: `UPDATE schedule_grade_prices SET price = 2147483648 WHERE id = (SELECT min(id) FROM schedule_grade_prices)`,
+    expect: 'rejected',
+    code: '22003',
+  },
+  {
+    id: 'price-other-concert-grade',
+    decision: 'Q40 · Q41',
+    rule: '(grade_id, concert_id) → grades FK',
+    label: '스터디 콘서트 회차에 다른 공연 등급의 가격을 매긴다',
+    sql: `WITH c AS (INSERT INTO concerts (venue_id, title) VALUES (${STUDY_ARENA}, '다른 공연') RETURNING id),
+     g AS (INSERT INTO grades (concert_id, name, color, sort_order) SELECT id, 'VIP', 'red', 10 FROM c RETURNING id)
+INSERT INTO schedule_grade_prices (schedule_id, grade_id, concert_id, price)
+SELECT (SELECT min(id) FROM schedules), g.id, ${STUDY_CONCERT}, 99000 FROM g`,
+    expect: 'rejected',
+    code: '23503',
+  },
+  {
+    id: 'seat-grade-without-price',
+    decision: 'Q42',
+    rule: '좌석 → 가격 FK 없음 (의도: 판매 전에 애플리케이션이 점검)',
+    label: '가격이 없는 등급(VIP 시야제한)으로 회차 좌석 하나의 등급을 바꾼다',
+    sql: `WITH g AS (INSERT INTO grades (concert_id, name, color, sort_order) VALUES (${STUDY_CONCERT}, 'VIP 시야제한', 'gray', 40) RETURNING id)
+UPDATE schedule_seats SET grade_id = g.id FROM g WHERE schedule_seats.id = (SELECT min(id) FROM schedule_seats)`,
+    expect: 'accepted',
+  },
+  {
     id: 'concert-duplicate-title',
     decision: 'Q15',
     rule: 'title에 UNIQUE 없음 (의도)',
@@ -459,6 +525,20 @@ UPDATE concerts SET venue_id = v.id FROM v WHERE concerts.title = '스터디 콘
     expect: 'accepted',
   },
 ];
+
+/**
+ * 판매 전 점검 (Q42). 가격표에 없는 (회차, 등급)의 좌석을 센다.
+ * 좌석을 먼저 깔고 가격은 오픈 전에 정할 수 있게 DB는 막지 않으므로, 애플리케이션이 판매를 열기 전에 돌린다
+ */
+export const UNPRICED_SEATS_SQL = `
+SELECT ss.schedule_id, ss.grade_id, count(*)::int AS seats
+FROM schedule_seats ss
+WHERE NOT EXISTS (
+  SELECT 1 FROM schedule_grade_prices p
+  WHERE p.schedule_id = ss.schedule_id AND p.grade_id = ss.grade_id
+)
+GROUP BY ss.schedule_id, ss.grade_id
+ORDER BY ss.schedule_id, ss.grade_id`;
 
 export interface ConstraintCheckResult {
   id: string;

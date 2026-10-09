@@ -76,6 +76,19 @@ CREATE TABLE schedule_seats (
   CONSTRAINT schedule_seats_seat_fk     FOREIGN KEY (seat_id, venue_id)       REFERENCES seats (id, venue_id)
 );
 
+-- 판매 가격 (Q38–Q40). 가격은 회차 + 등급이 정한다. 결제 금액은 예약 이력에 따로 남긴다
+CREATE TABLE schedule_grade_prices (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  schedule_id BIGINT  NOT NULL,
+  grade_id    BIGINT  NOT NULL,
+  -- 검증용 복사본 (Q41). 회차와 등급이 같은 공연의 것임을 복합 FK로 강제한다. NULL이면 검사를 건너뛰므로 NOT NULL
+  concert_id  BIGINT  NOT NULL,
+  price       INTEGER NOT NULL CHECK (price >= 0),
+  CONSTRAINT schedule_grade_prices_schedule_grade_uq UNIQUE (schedule_id, grade_id),
+  CONSTRAINT schedule_grade_prices_schedule_fk FOREIGN KEY (schedule_id, concert_id) REFERENCES schedules (id, concert_id),
+  CONSTRAINT schedule_grade_prices_grade_fk    FOREIGN KEY (grade_id, concert_id)    REFERENCES grades (id, concert_id)
+);
+
 -- 설계 결정을 DB에도 남긴다. 시각화 화면의 ERD가 이 주석을 읽는다
 COMMENT ON TABLE venues IS '공연장 (정적). 총 좌석 수는 저장하지 않고 seats를 센다 (Q12)';
 COMMENT ON COLUMN venues.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
@@ -137,3 +150,12 @@ COMMENT ON CONSTRAINT seats_id_venue_uq ON seats IS '복합 FK (seat_id, venue_i
 COMMENT ON CONSTRAINT concerts_id_venue_uq ON concerts IS '복합 FK (concert_id, venue_id)의 대상 (Q36)';
 COMMENT ON CONSTRAINT schedules_id_concert_uq ON schedules IS '복합 FK (schedule_id, concert_id)의 대상 (Q36)';
 COMMENT ON CONSTRAINT grades_id_concert_uq ON grades IS '복합 FK (grade_id, concert_id)의 대상 (Q36)';
+
+COMMENT ON TABLE schedule_grade_prices IS '판매 가격(가격표). 한 행 = 한 회차의 한 등급 가격. 좌석별 차이는 별도 등급으로 (Q38, Q39). 좌석이 가격을 가리키는 FK는 두지 않는다: 좌석을 먼저 깔고 가격은 오픈 전에 정하므로, 가격 없는 좌석은 판매 전에 애플리케이션이 점검한다 (Q42)';
+COMMENT ON COLUMN schedule_grade_prices.id IS '내부 PK는 BIGINT IDENTITY로 통일 (Q10)';
+COMMENT ON COLUMN schedule_grade_prices.price IS '원 단위 정수. 실수 타입은 합계에 오차가 쌓이고 money는 통화 설정을 탄다 (Q40)';
+COMMENT ON CONSTRAINT schedule_grade_prices_price_check ON schedule_grade_prices IS '음수 금지. 0원(초대권)은 허용 (Q40)';
+COMMENT ON CONSTRAINT schedule_grade_prices_schedule_grade_uq ON schedule_grade_prices IS '한 회차의 한 등급에 가격은 하나 (Q40)';
+COMMENT ON COLUMN schedule_grade_prices.concert_id IS '검증용 복사본. 회차와 등급이 같은 공연의 것임을 복합 FK로 강제한다 (Q41)';
+COMMENT ON CONSTRAINT schedule_grade_prices_schedule_fk ON schedule_grade_prices IS '회차와 그 회차의 공연 (Q41)';
+COMMENT ON CONSTRAINT schedule_grade_prices_grade_fk ON schedule_grade_prices IS '등급이 같은 공연의 것이어야 한다. 다른 공연 등급의 가격 금지 (Q41). 등급 삭제가 드물어 자식 쪽 인덱스는 두지 않는다 (Q37과 같은 기준)';

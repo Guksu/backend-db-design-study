@@ -171,4 +171,11 @@ export const DECISIONS: Decision[] = [
     why: '부모 삭제는 드물고, 이 테이블은 쓰기가 가장 잦다 (Q16의 기준)',
     verify: { page: 'index', label: 'FK 인덱스 비교' },
   },
+  {
+    q: 'Q38 – Q42',
+    topic: '가격',
+    decision: 'schedule_grade_prices(schedule_id, grade_id, price INTEGER ≥ 0), UNIQUE (schedule_id, grade_id), concert_id 복합 FK로 같은 공연만. 가격 없는 좌석은 판매 전에 애플리케이션이 점검. 결제 금액은 예약 이력에 스냅샷',
+    why: '가격은 회차와 등급이 정한다. 원화 단가는 정수로 정확히 담기고, 실수 타입은 합계에 오차가 쌓인다. 좌석은 가격보다 먼저 깔릴 수 있다',
+    verify: { page: 'number', label: '숫자 타입 비교' },
+  },
 ];

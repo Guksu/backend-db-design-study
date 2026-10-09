@@ -60,6 +60,13 @@ const SQLSTATES = [
     here: "좌석 상태에 '예약완료' (Q34)",
     message: '화면 문구가 아니라 키(sold)를 보내야 하는 코드 버그. 서버 로그로',
   },
+  {
+    code: '22003',
+    name: 'numeric_value_out_of_range',
+    meaning: '타입이 담을 수 있는 범위를 넘음',
+    here: 'INTEGER 가격에 21억 넘는 값 (Q40)',
+    message: '"가격이 너무 커요". 합계 · 곱셈이라면 BIGINT로 계산',
+  },
 ];
 
 const OUTCOME = { rejected: '거부', accepted: '들어감' } as const;

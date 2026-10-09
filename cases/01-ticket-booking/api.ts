@@ -3,6 +3,7 @@ import { streamSSE } from 'hono/streaming';
 import { introspectSchema, previewTable } from '../../lab/introspect';
 import { runIndexLab } from './indexLab';
 import { runIndexOrderLab } from './indexOrderLab';
+import { runNumberLab } from './numberLab';
 import { runTimeLab } from './timeLab';
 import {
   CONSTRAINT_CHECKS,
@@ -71,6 +72,7 @@ export const ticketApi = new Hono()
     return c.json(result);
   })
   .post('/time-lab', async (c) => c.json(await runTimeLab(pool)))
+  .post('/number-lab', async (c) => c.json(await runNumberLab(pool)))
   .post('/index-lab', async (c) => {
     const body = await c.req.json();
     const allowed = [10_000, 100_000, 1_000_000];

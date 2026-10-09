@@ -9,6 +9,7 @@ import {
   runConstraintCheck,
   runRace,
   SCHEMA,
+  UNPRICED_SEATS_SQL,
 } from '../ticket';
 
 const pool = createTicketPool();
@@ -407,5 +408,94 @@ describe('Q35 · Q36. 복합 FK', () => {
       JOIN seats se ON se.id = ss.seat_id
     `);
     expect(rows[0]).toEqual({ total: 2000, consistent: 2000 });
+  });
+});
+
+describe('Q40. 숫자 타입과 가격', () => {
+  it('REAL은 합계 · 큰 값에서, DOUBLE은 소수 덧셈에서 틀리고, INTEGER는 큰 곱셈에서 넘치고, MONEY는 달러로 보인다', async () => {
+    const { runNumberLab } = await import('../numberLab');
+    const rows = await runNumberLab(pool);
+    const cell = (id: string, type: string) => rows.find((r) => r.id === id)!.cells.find((c) => c.type === type)!;
+
+    expect(cell('sum', 'real').ok).toBe(false);
+    expect(cell('large', 'real').ok).toBe(false);
+    expect(cell('tenths', 'double precision').ok).toBe(false);
+    expect(cell('multiply', 'integer').code).toBe('22003');
+    expect(cell('multiply', 'bigint').ok).toBe(true);
+    expect(cell('display', 'money').shown).toMatch(/^\$/);
+    for (const id of ['sum', 'tenths', 'large', 'multiply', 'display']) expect(cell(id, 'numeric').ok).toBe(true);
+  });
+
+  it('시드: 회차 2개 × 등급 3개 = 가격 6행, 회차마다 다를 수 있다', async () => {
+    const { rows } = await pool.query(`
+      SELECT to_char(sc.starts_at AT TIME ZONE 'Asia/Seoul', 'MM-DD') AS day, g.name, p.price
+      FROM schedule_grade_prices p
+      JOIN schedules sc ON sc.id = p.schedule_id
+      JOIN grades g ON g.id = p.grade_id
+      ORDER BY sc.starts_at, g.sort_order
+    `);
+    expect(rows.map((r) => `${r.day} ${r.name} ${r.price}`)).toEqual([
+      '12-24 VIP 165000',
+      '12-24 R 143000',
+      '12-24 S 121000',
+      '12-25 VIP 176000',
+      '12-25 R 154000',
+      '12-25 S 132000',
+    ]);
+  });
+});
+
+describe('Q41. 가격도 같은 공연의 회차 · 등급만', () => {
+  it('가격 테이블의 FK 둘이 concert_id를 함께 쓰고, 시드 6행의 복사본이 원본과 같다', async () => {
+    const table = (await introspectSchema(pool, SCHEMA)).find((t) => t.name === 'schedule_grade_prices');
+    const fks = table?.constraints
+      .filter((c) => c.kind === 'FOREIGN KEY')
+      .map((c) => `${c.columns.join(',')}>${c.refTable}(${c.refColumns.join(',')})`)
+      .sort();
+    expect(fks).toEqual(['grade_id,concert_id>grades(id,concert_id)', 'schedule_id,concert_id>schedules(id,concert_id)']);
+
+    const { rows } = await pool.query(`
+      SELECT count(*)::int AS total,
+             count(*) FILTER (WHERE p.concert_id = sc.concert_id AND g.concert_id = sc.concert_id)::int AS consistent
+      FROM schedule_grade_prices p
+      JOIN schedules sc ON sc.id = p.schedule_id
+      JOIN grades g ON g.id = p.grade_id
+    `);
+    expect(rows[0]).toEqual({ total: 6, consistent: 6 });
+  });
+});
+
+describe('Q42. 가격 없는 좌석은 애플리케이션이 점검', () => {
+  it('DB는 막지 않고, 판매 전 점검 쿼리가 가격 없는 (회차, 등급)을 찾아낸다', async () => {
+    expect((await pool.query(UNPRICED_SEATS_SQL)).rows).toEqual([]);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows: grade } = await client.query(`
+        INSERT INTO grades (concert_id, name, color, sort_order)
+        SELECT concert_id, 'VIP 시야제한', 'gray', 40 FROM grades ORDER BY id LIMIT 1
+        RETURNING id`);
+      // 좌석부터 깔고 가격은 나중에 정하는 순서가 DB에서 허용된다
+      const { rows: seats } = await client.query(
+        `UPDATE schedule_seats SET grade_id = $1
+         WHERE id IN (SELECT id FROM schedule_seats WHERE schedule_id = (SELECT min(id) FROM schedules) ORDER BY id LIMIT 4)
+         RETURNING schedule_id`,
+        [grade[0].id],
+      );
+      const { rows: found } = await client.query(UNPRICED_SEATS_SQL);
+      expect(found).toEqual([{ schedule_id: seats[0].schedule_id, grade_id: grade[0].id, seats: 4 }]);
+
+      // 오픈 전에 가격을 매기면 점검을 통과한다
+      await client.query(
+        `INSERT INTO schedule_grade_prices (schedule_id, grade_id, concert_id, price)
+         SELECT $1, id, concert_id, 132000 FROM grades WHERE id = $2`,
+        [seats[0].schedule_id, grade[0].id],
+      );
+      expect((await client.query(UNPRICED_SEATS_SQL)).rows).toEqual([]);
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
   });
 });
